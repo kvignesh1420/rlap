@@ -1,10 +1,9 @@
 #ifndef RLAP_CC_FACTORIZERS_H
 #define RLAP_CC_FACTORIZERS_H
 
-#include <Eigen/SparseCore>
-#include <Eigen/SparseCholesky>
-#include <Eigen/SparseLU>
-#include <Eigen/Dense>
+#include "third_party/eigen3/Eigen/SparseCore"
+#include "third_party/eigen3/Eigen/SparseCholesky"
+#include "third_party/eigen3/Eigen/Core"
 #include <vector>
 #include "samplers.h"
 #include "types.h"

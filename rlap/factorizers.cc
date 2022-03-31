@@ -1,7 +1,7 @@
-#include <Eigen/SparseCore>
-#include <Eigen/SparseCholesky>
-#include <Eigen/SparseLU>
-#include <Eigen/Dense>
+#include "third_party/eigen3/Eigen/SparseCore"
+#include "third_party/eigen3/Eigen/SparseCholesky"
+#include "third_party/eigen3/Eigen/Core"
+#include "third_party/eigen3/Eigen/Cholesky"
 #include <iostream>
 #include <cmath>
 #include <functional>
@@ -131,7 +131,6 @@ void NaiveApproximateCholesky::compute(){
 
 
 Eigen::SparseMatrix<float>* NaiveApproximateCholesky::getStar(Eigen::SparseMatrix<float>* L, int i){
-    Eigen::SparseMatrix<float>* star = new Eigen::SparseMatrix<float>(L->rows(), L->cols());
 
     Eigen::SparseMatrix<float> E_i(L->rows(), L->cols());
     E_i.reserve(Eigen::VectorXi::Constant(L->cols(), 2));
@@ -145,9 +144,9 @@ Eigen::SparseMatrix<float>* NaiveApproximateCholesky::getStar(Eigen::SparseMatri
     }
     E_i.makeCompressed();
     Eigen::SparseMatrix<float>* star_i = new Eigen::SparseMatrix<float>(L->rows(), L->cols());
-    *star = E_i * E_i.transpose();
+    *star_i = E_i * E_i.transpose();
 
-    return star;
+    return star_i;
 }
 
 Eigen::SparseMatrix<float> NaiveApproximateCholesky::getLaplacian(){
@@ -173,7 +172,6 @@ void ApproximateCholesky::compute(){
 
 OrderedMatrix* ApproximateCholesky::getOrderedMatrix(){
     int n = _A->rows();
-    int m = _A->nonZeros();
     std::vector<float> cols;
     std::vector<OrderedElement*> llelems;
     int ptr = 0;

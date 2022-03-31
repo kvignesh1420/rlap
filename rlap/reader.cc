@@ -1,4 +1,4 @@
-#include <Eigen/SparseCore>
+#include "third_party/eigen3/Eigen/SparseCore"
 #include <iostream>
 #include <vector>
 #include <fstream>

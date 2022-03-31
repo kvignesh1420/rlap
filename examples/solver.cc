@@ -1,16 +1,13 @@
-#include <Eigen/SparseCore>
-#include <Eigen/SparseCholesky>
-#include <Eigen/SparseLU>
+#include "third_party/eigen3/Eigen/SparseCore"
+#include "third_party/eigen3/Eigen/SparseCholesky"
 #include <iostream>
 #include <vector>
 #include <fstream>
 #include <vector>
-#include "reader.h"
-#include "factorizers.h"
-#include "cg.h"
-#include "samplers.h"
-#include "tracer.h"
-#include "types.h"
+#include "rlap/reader.h"
+#include "rlap/factorizers.h"
+#include "rlap/cg.h"
+#include "rlap/types.h"
 
 #define BLOCK_SIZE 125000
 
@@ -33,7 +30,7 @@ Eigen::SparseMatrix<float>* getAdjacencyMatrix(std::string filepath, int nrows, 
 int main(){
 
     int N = 125000;
-    std::string filepath = "../data/grid50.tsv";
+    std::string filepath = "data/grid50.tsv";
 
     Eigen::SparseMatrix<float>* A = getAdjacencyMatrix(filepath, N, N);
     ApproximateCholesky fact = ApproximateCholesky(A);

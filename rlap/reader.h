@@ -1,8 +1,7 @@
 #ifndef RLAP_CC_READER_H
 #define RLAP_CC_READER_H
 
-#include <Eigen/SparseCore>
-#include <Eigen/Dense>
+#include "third_party/eigen3/Eigen/SparseCore"
 #include <string>
 
 class Reader{
