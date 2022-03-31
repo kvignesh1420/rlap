@@ -1,9 +1,6 @@
+#include <iostream>
 #include "third_party/eigen3/Eigen/SparseCore"
 #include "third_party/eigen3/Eigen/SparseCholesky"
-#include <iostream>
-#include <vector>
-#include <fstream>
-#include <vector>
 #include "rlap/reader.h"
 #include "rlap/factorizers.h"
 #include "rlap/cg.h"
@@ -24,8 +21,6 @@ Eigen::SparseMatrix<float>* getAdjacencyMatrix(std::string filepath, int nrows, 
     );
     return A_block;
 }
-
-
 
 int main(){
 
