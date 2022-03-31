@@ -30,3 +30,14 @@
 *.exe
 *.out
 *.app
+cc/solver
+
+# helpers
+concepts/
+data/*.tsv
+
+# third-party
+eigen-3.4.0/
+
+#bazel
+bazel-*
