@@ -1,5 +1,5 @@
-#ifndef RLAP_CC_TRACER_H
-#define RLAP_CC_TRACER_H
+#ifndef RLAP_TRACER_H
+#define RLAP_TRACER_H
 
 // TRACER macro for verbose tracing of intermediate actions
 #define TRACER(fmt...) do { \

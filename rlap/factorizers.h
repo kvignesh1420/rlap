@@ -1,5 +1,5 @@
-#ifndef RLAP_CC_FACTORIZERS_H
-#define RLAP_CC_FACTORIZERS_H
+#ifndef RLAP_FACTORIZERS_H
+#define RLAP_FACTORIZERS_H
 
 #include "third_party/eigen3/Eigen/SparseCore"
 #include "third_party/eigen3/Eigen/SparseCholesky"

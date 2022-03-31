@@ -1,5 +1,5 @@
-#ifndef RLAP_CC_TYPES_H
-#define RLAP_CC_TYPES_H
+#ifndef RLAP_TYPES_H
+#define RLAP_TYPES_H
 
 #include <vector>
 
