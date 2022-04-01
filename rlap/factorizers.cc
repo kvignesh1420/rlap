@@ -8,6 +8,7 @@
 #include <random>
 #include "factorizers.h"
 #include "samplers.h"
+#include "cg.h"
 
 #define PTR_RESET -1
 
@@ -162,6 +163,14 @@ Eigen::MatrixXf NaiveApproximateCholesky::getReconstructedLaplacian(){
 ApproximateCholesky::ApproximateCholesky(Eigen::SparseMatrix<float>* Adj){
     _A = Adj;
     _L = this->computeLaplacian(Adj);
+}
+
+Eigen::VectorXf ApproximateCholesky::solve(Eigen::VectorXf b){
+    this->compute();
+    PConjugateGradient pcg = PConjugateGradient(_L, &b);
+    pcg.setPreconditioner(_ldli);
+    Eigen::VectorXf x = pcg.solve(1e-12);
+    return x;
 }
 
 void ApproximateCholesky::compute(){

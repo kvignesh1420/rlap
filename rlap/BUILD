@@ -35,6 +35,7 @@ cc_library(
     deps = [
         ":types",
         ":samplers",
+        ":cg",
         "//third_party/eigen3"
     ],
     visibility = ["//visibility:public"]

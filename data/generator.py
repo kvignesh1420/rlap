@@ -1,5 +1,4 @@
 """A helper script to generate adjacency matrix data"""
-import imp
 import networkx as nx
 
 def generate_complete_graph(N, out_file):

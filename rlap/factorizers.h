@@ -101,6 +101,8 @@ class ApproximateCholesky: public Factorizer{
     Eigen::MatrixXf getReconstructedLaplacian() override;
     // retrieve the pre-conditioner
     LDLi* getPreconditioner();
+    // solve for the unknowns
+    Eigen::VectorXf solve(Eigen::VectorXf b);
   private:
     OrderedMatrix* getOrderedMatrix();
     float getColumnLength(OrderedMatrix* ordmat, int i, std::vector<ColumnElement>* colspace);

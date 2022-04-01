@@ -27,8 +27,6 @@ A laplacian system of equations can be solved using `rlap` as follows:
 #include "third_party/eigen3/Eigen/SparseCholesky"
 #include "rlap/reader.h"
 #include "rlap/factorizers.h"
-#include "rlap/cg.h"
-#include "rlap/types.h"
 
 int main(){
 	// read the tsv adjacency matrix
@@ -39,24 +37,17 @@ int main(){
 
 	// initialize the factorizer
 	ApproximateCholesky fact = ApproximateCholesky(A);
-	// compute and retrieve the preconditioner
-    fact.compute();
-    LDLi* ldli = fact.getPreconditioner();
 
 	// retrieve the laplacian of the graph
 	Eigen::SparseMatrix<float> L = fact.getLaplacian();
-
+    // generate random b vector
     Eigen::VectorXf b = Eigen::VectorXf::Random(BLOCK_SIZE);
 	// normalize b
     float b_mean = b.mean();
     Eigen::VectorXf b_m = b - Eigen::VectorXf::Ones(b.size())*b_mean;
 
     // solve Lx = b_m with pre-conditioned conjugate descent
-    std::cout << "initializing the PCG solver" << std::endl;
-    PConjugateGradient pcg = PConjugateGradient(&L, &b_m);
-    pcg.setPreconditioner(ldli);
-    std::cout << "start solving using PCG" << std::endl;
-    x = pcg.solve(/*tolerance=*/1e-12);
+    x = fact.solve(b_m);
 
     std::cout << "Approximation error = " << (L*x - b_m).norm()/b_m.norm() << std::endl;
 
