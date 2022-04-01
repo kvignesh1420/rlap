@@ -29,20 +29,20 @@ A laplacian system of equations can be solved using `rlap` as follows:
 #include "rlap/factorizers.h"
 
 int main(){
-	// read the tsv adjacency matrix
-	int N = 125000; // number of rows/cols
+    // read the tsv adjacency matrix
+    int N = 125000; // number of rows/cols
     std::string filepath = "data/grid50.tsv";
-	Reader* r = new TSVReader(filepath, N, N);
+    Reader* r = new TSVReader(filepath, N, N);
     Eigen::SparseMatrix<float>* A = r->Read();
 
-	// initialize the factorizer
-	ApproximateCholesky fact = ApproximateCholesky(A);
+    // initialize the factorizer
+    ApproximateCholesky fact = ApproximateCholesky(A);
 
-	// retrieve the laplacian of the graph
-	Eigen::SparseMatrix<float> L = fact.getLaplacian();
+    // retrieve the laplacian of the graph
+    Eigen::SparseMatrix<float> L = fact.getLaplacian();
     // generate random b vector
     Eigen::VectorXf b = Eigen::VectorXf::Random(BLOCK_SIZE);
-	// normalize b
+    // normalize b
     float b_mean = b.mean();
     Eigen::VectorXf b_m = b - Eigen::VectorXf::Ones(b.size())*b_mean;
 
