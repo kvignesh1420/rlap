@@ -1,5 +1,5 @@
-#ifndef RLAP_READER_H
-#define RLAP_READER_H
+#ifndef RLAP_CC_READER_H
+#define RLAP_CC_READER_H
 
 #include "third_party/eigen3/Eigen/SparseCore"
 #include <string>

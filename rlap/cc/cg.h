@@ -1,5 +1,5 @@
-#ifndef RLAP_CG_H
-#define RLAP_CG_H
+#ifndef RLAP_CC_CG_H
+#define RLAP_CC_CG_H
 
 #include "third_party/eigen3/Eigen/SparseCore"
 #include "third_party/eigen3/Eigen/SparseCholesky"
