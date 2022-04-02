@@ -25,8 +25,8 @@ A laplacian system of equations can be solved using `rlap` as follows:
 #include <iostream>
 #include "third_party/eigen3/Eigen/SparseCore"
 #include "third_party/eigen3/Eigen/SparseCholesky"
-#include "rlap/reader.h"
-#include "rlap/factorizers.h"
+#include "rlap/cc/reader.h"
+#include "rlap/cc/factorizers.h"
 
 int main(){
     // read the tsv adjacency matrix

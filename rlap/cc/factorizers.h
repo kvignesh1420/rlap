@@ -16,7 +16,10 @@ class Factorizer{
     virtual Eigen::MatrixXf getReconstructedLaplacian() = 0;
     // get the laplacian of the adjacency matrix
     Eigen::SparseMatrix<float>* computeLaplacian(Eigen::SparseMatrix<float>* Adj);
+    virtual ~Factorizer() = default;
 };
+
+// The reference/benchmark factorizers should be implemented below
 
 class EigenCholeskyLLT: public Factorizer{
   public:
@@ -88,11 +91,25 @@ class NaiveApproximateCholesky: public Factorizer{
     Eigen::SparseMatrix<float>* _G;
 };
 
+// end of reference/benchmark factorizers
+
+// The main factorizers should be implemented below
+// These will be exposed as python classes for simple interoperable
+// usage with numpy/scipy.
 class ApproximateCholesky: public Factorizer{
   public:
     // approximate cholesky factorization from the ground up
     ApproximateCholesky(Eigen::SparseMatrix<float>* Adj);
+    ApproximateCholesky(Eigen::SparseMatrix<float> Adj);
+    // A constructor which enables the user to just pass the
+    // tsv/csv file for the adjacency matrix of the graph.
+    // This reduces the overhead of copying scipy csc matrices
+    // from the python layer to the c++ layer.
+    ApproximateCholesky(std::string filename, int nrows, int ncols);
     ~ApproximateCholesky(){};
+    // retrive the adjancency matrix. helpful if factorizer was
+    // initialized with a filename and dimension
+    Eigen::SparseMatrix<float> getAdjacencyMatrix();
     // compute the pre-conditioning info for solvers
     void compute() override;
     // retrive the computed laplacian

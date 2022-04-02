@@ -1,10 +1,10 @@
 #include <iostream>
 #include "third_party/eigen3/Eigen/SparseCore"
 #include "third_party/eigen3/Eigen/SparseCholesky"
-#include "rlap/reader.h"
-#include "rlap/factorizers.h"
-#include "rlap/cg.h"
-#include "rlap/types.h"
+#include "rlap/cc/reader.h"
+#include "rlap/cc/factorizers.h"
+#include "rlap/cc/cg.h"
+#include "rlap/cc/types.h"
 
 #define BLOCK_SIZE 125000
 

@@ -9,6 +9,7 @@
 #include "factorizers.h"
 #include "samplers.h"
 #include "cg.h"
+#include "reader.h"
 
 #define PTR_RESET -1
 
@@ -162,7 +163,22 @@ Eigen::MatrixXf NaiveApproximateCholesky::getReconstructedLaplacian(){
 
 ApproximateCholesky::ApproximateCholesky(Eigen::SparseMatrix<float>* Adj){
     _A = Adj;
-    _L = this->computeLaplacian(Adj);
+    _L = this->computeLaplacian(_A);
+}
+
+ApproximateCholesky::ApproximateCholesky(Eigen::SparseMatrix<float> Adj){
+    _A = &Adj;
+    _L = this->computeLaplacian(_A);
+}
+
+ApproximateCholesky::ApproximateCholesky(std::string filename, int nrows, int ncols){
+    Reader* r = new TSVReader(filename, nrows, ncols);
+    _A = r->Read();
+    _L = this->computeLaplacian(_A);
+}
+
+Eigen::SparseMatrix<float> ApproximateCholesky::getAdjacencyMatrix(){
+    return *_A;
 }
 
 Eigen::VectorXf ApproximateCholesky::solve(Eigen::VectorXf b){
@@ -348,7 +364,7 @@ LDLi* ApproximateCholesky::computeLDLi(OrderedMatrix* ordmat){
         }
         float wdeg = csum;
         float colScale = 1;
-        
+
         for(int joffset = 0; joffset < len-1; joffset++){
             ColumnElement ColumnElement = colspace->at(joffset);
             float w = ColumnElement.val*colScale;
