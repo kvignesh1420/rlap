@@ -197,6 +197,9 @@ cython_debug/
 
 ######################### rlap ########################
 
+# vscode
+.vscode/*
+
 # bin
 cc/solver
 
