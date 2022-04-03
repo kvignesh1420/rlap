@@ -121,13 +121,6 @@ class ApproximateCholesky: public Factorizer{
     // solve for the unknowns
     Eigen::VectorXf solve(Eigen::VectorXf b);
   private:
-    OrderedMatrix* getOrderedMatrix();
-    float getColumnLength(OrderedMatrix* ordmat, int i, std::vector<ColumnElement>* colspace);
-    void printColumn(OrderedMatrix* ordmat, int i);
-    void printColspace(std::vector<ColumnElement>* colspace);
-    void printMatrixDetails(OrderedMatrix* a);
-    float compressColumn(std::vector<ColumnElement>* colspace, float len);
-    LDLi* computeLDLi(OrderedMatrix* ordmat);
     Eigen::SparseMatrix<float>* _A;
     Eigen::SparseMatrix<float>* _L;
     LDLi* _ldli;

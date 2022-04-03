@@ -37,6 +37,7 @@ cc_library(
         ":samplers",
         ":cg",
         ":reader",
+        ":preconditioner",
         "//third_party/eigen3"
     ],
     visibility = ["//visibility:public"]
@@ -46,6 +47,17 @@ cc_library(
     name = "cg",
     srcs = ["cg.cc"],
     hdrs = ["cg.h"],
+    deps = [
+        ":types",
+        "//third_party/eigen3"
+    ],
+    visibility = ["//visibility:public"]
+)
+
+cc_library(
+    name = "preconditioner",
+    srcs = ["preconditioner.cc"],
+    hdrs = ["preconditioner.h"],
     deps = [
         ":types",
         "//third_party/eigen3"
