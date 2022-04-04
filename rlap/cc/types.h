@@ -3,6 +3,62 @@
 
 #include <vector>
 
+typedef struct LLp{
+    float row;
+    float val;
+    LLp* next;
+    LLp* reverse;
+
+    LLp(){
+        row = 0;
+        val = 0;
+        next = this;
+        reverse = this;
+    }
+    LLp(float _row, float _val, LLp* _next, LLp* _reverse){
+        row = _row;
+        val = _val;
+        next = _next;
+        reverse = _reverse;
+    }
+    LLp(float _row, float _val){
+        row = _row;
+        val = _val;
+        next = this;
+        reverse = this;
+    }
+    LLp(float _row, float _val, LLp* _next){
+        row = _row;
+        val = _val;
+        next = _next;
+        reverse = this;
+    }
+
+} LLp;
+
+typedef struct LLMatp
+{
+    float n;
+    std::vector<float> degs;
+    std::vector<LLp*> cols;
+    std::vector<LLp*> lles;
+} LLMatp;
+
+typedef struct ApproxCholPQElem{
+    float prev;
+    float next;
+    float key;
+} ApproxCholPQElem;
+
+typedef struct ApproxCholPQ{
+    std::vector<ApproxCholPQElem*> elems;
+    std::vector<float> lists;
+    float minlist;
+    float nitems;
+    float n;
+} ApproxCholPQ;
+
+
 typedef struct OrderedElement{
     // Represents an element of a matrix along with the
     // information about the order in which it appears in

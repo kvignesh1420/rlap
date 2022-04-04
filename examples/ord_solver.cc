@@ -5,6 +5,7 @@
 #include "rlap/cc/factorizers.h"
 #include "rlap/cc/cg.h"
 #include "rlap/cc/types.h"
+#include "rlap/cc/preconditioner.h"
 
 #define BLOCK_SIZE 125000
 
@@ -28,6 +29,7 @@ int main(){
     std::string filepath = "data/grid50.tsv";
 
     Eigen::SparseMatrix<float>* A = getAdjacencyMatrix(filepath, N, N);
+    // std::cout << *A << std::endl;
     ApproximateCholesky fact = ApproximateCholesky(A);
     fact.compute();
     Eigen::SparseMatrix<float> L = fact.getLaplacian();
