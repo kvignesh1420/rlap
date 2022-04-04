@@ -212,3 +212,5 @@ eigen-3.4.0/
 
 #bazel
 bazel-*
+.clwb/
+.idea/
