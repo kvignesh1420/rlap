@@ -1,5 +1,7 @@
 """A helper script to generate adjacency matrix data"""
 import networkx as nx
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
 
 def generate_complete_graph(N, out_file):
     """generate adjacency matrix for a complete graph
@@ -56,11 +58,23 @@ def generate_grid_graph(dims, out_file):
         f.writelines(res)
 
 
-if __name__ == "__main__":
-    for i in [5, 10, 20, 50, 100, 500, 1000, 2000, 5000]:
-        out_file = "connected{}.tsv".format(i)
-        generate_complete_graph(i, out_file)
+def main():
+    connected_nodes = [5, 10, 20, 50, 100, 500, 1000, 2000, 5000]
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        future_map = {executor.submit(generate_complete_graph, c, "connected{}.tsv".format(c)): i for i, c in enumerate(connected_nodes)}
+        for future in as_completed(future_map):
+            i = future_map[future]
+            future.result()
+            print("generated connected graph with: {} nodes".format(connected_nodes[i]))
+    
+    grid_nodes = [[3,3,3], [10,10,10], [20,20,20], [50,50,50], [100, 100, 100]]
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        future_map = {executor.submit(generate_grid_graph, c, "grid{}.tsv".format(c[0])): i for i, c in enumerate(grid_nodes)}
+        for future in as_completed(future_map):
+            i = future_map[future]
+            future.result()
+            print("generated grid graph with: {} nodes".format(grid_nodes[i]))
 
-    for i in [[3,3,3], [10,10,10], [20,20,20], [50,50,50]]:
-        out_file = "grid{}.tsv".format(i[0])
-        generate_grid_graph(i, out_file)
+
+if __name__ == "__main__":
+    main()
