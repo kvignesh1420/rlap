@@ -27,20 +27,20 @@ class PriorityPreconditioner{
     ~PriorityPreconditioner(){};
     LDLi* getLDLi();
   private:
-    LLMatp* getLLMatp();
-    void printColumn(LLMatp* pmat, int i);
-    ApproxCholPQ* getApproxCholPQ(std::vector<float> a);
-    float approxCholPQPop(ApproxCholPQ* pq);
-    void approxCholPQMove(ApproxCholPQ* pq, int i, float newkey, int oldlist, int newlist);
-    void approxCholPQDec(ApproxCholPQ* pq, int i);
-    void approxCholPQInc(ApproxCholPQ* pq, int i);
+    PriorityMatrix* getPriorityMatrix();
+    void printColumn(PriorityMatrix* pmat, int i);
+    DegreePQ* getDegreePQ(std::vector<float> a);
+    float DegreePQPop(DegreePQ* pq);
+    void DegreePQMove(DegreePQ* pq, int i, float newkey, int oldlist, int newlist);
+    void DegreePQDec(DegreePQ* pq, int i);
+    void DegreePQInc(DegreePQ* pq, int i);
     std::vector<float> getFlipIndices(Eigen::SparseMatrix<float>* M);
-    float getColumnLength(LLMatp* pmat, int i, std::vector<LLp*>* colspace);
-    float compressColumn(LLMatp* pmat, std::vector<LLp*>* colspace, float len, ApproxCholPQ* pq);
+    float getColumnLength(PriorityMatrix* pmat, int i, std::vector<PriorityElement*>* colspace);
+    float compressColumn(PriorityMatrix* pmat, std::vector<PriorityElement*>* colspace, float len, DegreePQ* pq);
     void printFlipIndices(std::vector<float> fi);
 
     Eigen::SparseMatrix<float>* _A;
-    LLMatp* _pmat;
+    PriorityMatrix* _pmat;
 };
 
 #endif

@@ -1,6 +1,6 @@
 cc_binary(
-    name = "ord_solver",
-    srcs = ["ord_solver.cc"],
+    name = "solver",
+    srcs = ["solver.cc"],
     deps = [
         "//rlap/cc:factorizers",
         "//rlap/cc:reader",

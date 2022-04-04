@@ -191,7 +191,7 @@ Eigen::VectorXf ApproximateCholesky::solve(Eigen::VectorXf b){
 }
 
 void ApproximateCholesky::compute(){
-    OrderedPreconditioner* prec = new OrderedPreconditioner(_A);
+    PriorityPreconditioner* prec = new PriorityPreconditioner(_A);
     _ldli = prec->getLDLi();
 }
 

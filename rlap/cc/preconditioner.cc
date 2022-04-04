@@ -254,7 +254,7 @@ LDLi* OrderedPreconditioner::getLDLi(){
 
 PriorityPreconditioner::PriorityPreconditioner(Eigen::SparseMatrix<float>* A){
     _A = A;
-    _pmat = getLLMatp();
+    _pmat = getPriorityMatrix();
 }
 
 std::vector<float> PriorityPreconditioner::getFlipIndices(Eigen::SparseMatrix<float>* M){
@@ -295,11 +295,11 @@ void PriorityPreconditioner::printFlipIndices(std::vector<float> fi){
     std::cout << std::endl;
 }
 
-LLMatp* PriorityPreconditioner::getLLMatp(){
-    // std::cout << "Getting LLMatp " << std::endl;
+PriorityMatrix* PriorityPreconditioner::getPriorityMatrix(){
+    // std::cout << "Getting PriorityMatrix " << std::endl;
     int n = _A->rows();
-    std::vector<LLp*> cols;
-    std::vector<LLp*> llelems;
+    std::vector<PriorityElement*> cols;
+    std::vector<PriorityElement*> llelems;
     std::vector<float> degs;
 
     // std::cout << "flipping " << std::endl;
@@ -315,16 +315,16 @@ LLMatp* PriorityPreconditioner::getLLMatp(){
 
         float j = _A->innerIndexPtr()[start_idx];
         float v = _A->valuePtr()[start_idx];
-        LLp* llpend = new LLp(j, v);
-        llelems.push_back(llpend);
-        LLp* next = llpend;
+        PriorityElement* pe = new PriorityElement(j, v);
+        llelems.push_back(pe);
+        PriorityElement* next = pe;
 
         for(int ind = start_idx + 1; ind < end_idx; ind++){
             j = _A->innerIndexPtr()[ind];
             v = _A->valuePtr()[ind];
-            LLp* llpe = new LLp(j, v, next);
-            llelems.push_back(llpe);
-            next = llpe;
+            PriorityElement* pe = new PriorityElement(j, v, next);
+            llelems.push_back(pe);
+            next = pe;
         }
         cols.push_back(next);
     }
@@ -337,17 +337,17 @@ LLMatp* PriorityPreconditioner::getLLMatp(){
         }
     }
 
-    LLMatp* llmp = new LLMatp();
-    llmp->n = n;
-    llmp->degs = degs;
-    llmp->cols = cols;
-    llmp->lles = llelems;
+    PriorityMatrix* pmat = new PriorityMatrix();
+    pmat->n = n;
+    pmat->degs = degs;
+    pmat->cols = cols;
+    pmat->lles = llelems;
     // std::cout << "Got LLMAtp" << std::endl;
-    return llmp;
+    return pmat;
 }
 
-void PriorityPreconditioner::printColumn(LLMatp* pmat, int i){
-    LLp* ll = pmat->cols.at(i);
+void PriorityPreconditioner::printColumn(PriorityMatrix* pmat, int i){
+    PriorityElement* ll = pmat->cols.at(i);
     std::cout << "col " << i << " row " << ll->row << " value " << ll->val << std::endl;
     while(ll->next!=ll){
         ll = ll->next;
@@ -355,10 +355,10 @@ void PriorityPreconditioner::printColumn(LLMatp* pmat, int i){
     }
 }
 
-ApproxCholPQ* PriorityPreconditioner::getApproxCholPQ(std::vector<float> degs){
+DegreePQ* PriorityPreconditioner::getDegreePQ(std::vector<float> degs){
     // std::cout << "get the PQ" << std::endl;
     float n = degs.size();
-    std::vector<ApproxCholPQElem*> elems;
+    std::vector<DegreePQElement*> elems;
     for(int i = 0; i < n; i++){
         elems.push_back(nullptr);
     }
@@ -373,13 +373,13 @@ ApproxCholPQ* PriorityPreconditioner::getApproxCholPQ(std::vector<float> degs){
         float head = lists.at(key);
 
         if(head >= 0){
-            ApproxCholPQElem* elem_i = new ApproxCholPQElem();
+            DegreePQElement* elem_i = new DegreePQElement();
             elem_i->prev = -1;
             elem_i->next = head;
             elem_i->key = key;
             elems.at(i) = elem_i;
 
-            ApproxCholPQElem* elem_head = new ApproxCholPQElem();
+            DegreePQElement* elem_head = new DegreePQElement();
             elem_head->prev = i;
             elem_head->next = elems.at(head)->next;
             elem_head->key = elems.at(head)->key;
@@ -387,7 +387,7 @@ ApproxCholPQ* PriorityPreconditioner::getApproxCholPQ(std::vector<float> degs){
             elems.at(head) = elem_head;
         }
         else{
-            ApproxCholPQElem* elem_i = new ApproxCholPQElem();
+            DegreePQElement* elem_i = new DegreePQElement();
             elem_i->prev = -1;
             elem_i->next = -1;
             elem_i->key = key;
@@ -395,17 +395,17 @@ ApproxCholPQ* PriorityPreconditioner::getApproxCholPQ(std::vector<float> degs){
         }
         lists.at(key) = i;
     }
-    ApproxCholPQ* acpq = new ApproxCholPQ();
-    acpq->elems = elems;
-    acpq->lists = lists;
-    acpq->minlist = minlist;
-    acpq->nitems = n;
-    acpq->n = n;
+    DegreePQ* pq = new DegreePQ();
+    pq->elems = elems;
+    pq->lists = lists;
+    pq->minlist = minlist;
+    pq->nitems = n;
+    pq->n = n;
     // std::cout << "got the PQ" << std::endl;
-    return acpq;
+    return pq;
 }
 
-float PriorityPreconditioner::approxCholPQPop(ApproxCholPQ* pq){
+float PriorityPreconditioner::DegreePQPop(DegreePQ* pq){
     // std::cout << "popping the element" << std::endl;
     if(pq->nitems == 0){
         throw std::invalid_argument("the PQ is empty. Cannot pop an element");
@@ -424,7 +424,7 @@ float PriorityPreconditioner::approxCholPQPop(ApproxCholPQ* pq){
     pq->lists.at(pq->minlist) = next;
 
     if(next > -1){
-        ApproxCholPQElem* elem_next = new ApproxCholPQElem();
+        DegreePQElement* elem_next = new DegreePQElement();
         elem_next->prev = -1;
         elem_next->next = pq->elems.at(next)->next;
         elem_next->key = pq->elems.at(next)->key;
@@ -437,7 +437,7 @@ float PriorityPreconditioner::approxCholPQPop(ApproxCholPQ* pq){
     return i;
 }
 
-void PriorityPreconditioner::approxCholPQMove(ApproxCholPQ* pq, int i, float newkey, int oldlist, int newlist){
+void PriorityPreconditioner::DegreePQMove(DegreePQ* pq, int i, float newkey, int oldlist, int newlist){
     // std::cout << "move in the PQ" << std::endl;
     // std::cout << "  i = " << i << " newkey = " << newkey << " oldlist = " << oldlist << " newlist = " << newlist << std::endl;
     float prev = pq->elems.at(i)->prev;
@@ -445,14 +445,14 @@ void PriorityPreconditioner::approxCholPQMove(ApproxCholPQ* pq, int i, float new
     // std::cout << "prev = " << prev << " next = " << next << std::endl;
     // remove i from the oldlist
     if(next > -1){
-        ApproxCholPQElem* elem_next = new ApproxCholPQElem();
+        DegreePQElement* elem_next = new DegreePQElement();
         elem_next->prev = prev;
         elem_next->next = pq->elems.at(next)->next;
         elem_next->key = pq->elems.at(next)->key;
         pq->elems.at(next) = elem_next;
     }
     if(prev > -1){
-        ApproxCholPQElem* elem_prev = new ApproxCholPQElem();
+        DegreePQElement* elem_prev = new DegreePQElement();
         elem_prev->prev = pq->elems.at(prev)->prev;
         elem_prev->next = next;
         elem_prev->key = pq->elems.at(prev)->key;
@@ -465,7 +465,7 @@ void PriorityPreconditioner::approxCholPQMove(ApproxCholPQ* pq, int i, float new
     float head = pq->lists.at(newlist);
     // std::cout << " head = " << head << std::endl;
     if(head > -1){
-        ApproxCholPQElem* elem_head = new ApproxCholPQElem();
+        DegreePQElement* elem_head = new DegreePQElement();
         elem_head->prev = i;
         elem_head->next = pq->elems.at(head)->next;
         elem_head->key = pq->elems.at(head)->key;
@@ -473,7 +473,7 @@ void PriorityPreconditioner::approxCholPQMove(ApproxCholPQ* pq, int i, float new
     }
     pq->lists.at(newlist) = i;
 
-    ApproxCholPQElem* elem_i = new ApproxCholPQElem();
+    DegreePQElement* elem_i = new DegreePQElement();
     elem_i->prev = -1;
     elem_i->next = head;
     elem_i->key = newkey;
@@ -482,7 +482,7 @@ void PriorityPreconditioner::approxCholPQMove(ApproxCholPQ* pq, int i, float new
     return;
 }
 
-void PriorityPreconditioner::approxCholPQDec(ApproxCholPQ* pq, int i){
+void PriorityPreconditioner::DegreePQDec(DegreePQ* pq, int i){
     // std::cout << "dec in the PQ " << i << std::endl;
     float n = pq->n;
     float deg_i = pq->elems.at(i)->key;
@@ -490,12 +490,12 @@ void PriorityPreconditioner::approxCholPQDec(ApproxCholPQ* pq, int i){
     int newlist = deg_i-1 <= n ? deg_i-1 : n + int((deg_i-1)/n);
     // std::cout << " deg_i = " << deg_i << std::endl;
     if(oldlist != newlist){
-        approxCholPQMove(pq, i, deg_i-1, oldlist, newlist);
+        DegreePQMove(pq, i, deg_i-1, oldlist, newlist);
         if(newlist < pq->minlist){
             pq->minlist = newlist;
         }
     }else{
-        ApproxCholPQElem* elem_i = new ApproxCholPQElem();
+        DegreePQElement* elem_i = new DegreePQElement();
         elem_i->prev = pq->elems.at(i)->prev;
         elem_i->next = pq->elems.at(i)->next;
         elem_i->key = pq->elems.at(i)->key - 1;
@@ -505,7 +505,7 @@ void PriorityPreconditioner::approxCholPQDec(ApproxCholPQ* pq, int i){
     return;
 }
 
-void PriorityPreconditioner::approxCholPQInc(ApproxCholPQ* pq, int i){
+void PriorityPreconditioner::DegreePQInc(DegreePQ* pq, int i){
     // std::cout << "inc in the PQ" << std::endl;
     float n = pq->n;
     float deg_i = pq->elems.at(i)->key;
@@ -513,9 +513,9 @@ void PriorityPreconditioner::approxCholPQInc(ApproxCholPQ* pq, int i){
     int newlist = deg_i+1 <= n ? deg_i+1 : n + int((deg_i+1)/n);
     // std::cout << " deg_i = " << deg_i << std::endl;
     if(oldlist != newlist){
-        approxCholPQMove(pq, i, deg_i+1, oldlist, newlist);
+        DegreePQMove(pq, i, deg_i+1, oldlist, newlist);
     }else{
-        ApproxCholPQElem* elem_i = new ApproxCholPQElem();
+        DegreePQElement* elem_i = new DegreePQElement();
         elem_i->prev = pq->elems.at(i)->prev;
         elem_i->next = pq->elems.at(i)->next;
         elem_i->key = pq->elems.at(i)->key + 1;
@@ -525,9 +525,9 @@ void PriorityPreconditioner::approxCholPQInc(ApproxCholPQ* pq, int i){
     return;
 }
 
-float PriorityPreconditioner::getColumnLength(LLMatp* pmat, int i, std::vector<LLp*>* colspace){
+float PriorityPreconditioner::getColumnLength(PriorityMatrix* pmat, int i, std::vector<PriorityElement*>* colspace){
     // std::cout << "get col length " << i << std::endl;
-    LLp* ll = pmat->cols[i];
+    PriorityElement* ll = pmat->cols[i];
     float len = 0;
     while(ll->next != ll){
         // std::cout << "loop in gcl" << std::endl;
@@ -553,11 +553,11 @@ float PriorityPreconditioner::getColumnLength(LLMatp* pmat, int i, std::vector<L
     return len;
 }
 
-float PriorityPreconditioner::compressColumn(LLMatp* a, std::vector<LLp*>* colspace, float len, ApproxCholPQ* pq){
+float PriorityPreconditioner::compressColumn(PriorityMatrix* a, std::vector<PriorityElement*>* colspace, float len, DegreePQ* pq){
     // std::cout << "Compressing col of len = " << len << std::endl;
 
     std::sort(colspace->begin(), colspace->begin()+len,
-         [](LLp* a, LLp* b) {return a->row < b->row; });
+         [](PriorityElement* a, PriorityElement* b) {return a->row < b->row; });
 
     float ptr = PTR_RESET;
     float currow = -1;
@@ -575,19 +575,19 @@ float PriorityPreconditioner::compressColumn(LLMatp* a, std::vector<LLp*>* colsp
             colspace->at(ptr)->val += colspace->at(i)->val;
             colspace->at(i)->reverse->val = 0;
 
-            approxCholPQDec(pq, currow);
+            DegreePQDec(pq, currow);
         }
     }
 
     std::sort(colspace->begin(), colspace->begin()+ptr+1,
-         [](LLp* a, LLp* b) {return a->val < b->val; });
+         [](PriorityElement* a, PriorityElement* b) {return a->val < b->val; });
     //  std::cout << "Compressed col to len = " << ptr+1 << std::endl;
     return ptr+1;
 }
 
 
 LDLi* PriorityPreconditioner::getLDLi(){
-    LLMatp* a = _pmat;
+    PriorityMatrix* a = _pmat;
     float n = a->n;
     LDLi* ldli = new LDLi();
     ldli->col = std::vector<float>();
@@ -598,15 +598,15 @@ LDLi* PriorityPreconditioner::getLDLi(){
     float ldli_row_ptr = 0;
     std::vector<float> d(n, 0.0);
 
-    ApproxCholPQ* pq = getApproxCholPQ(a->degs);
+    DegreePQ* pq = getDegreePQ(a->degs);
 
     float it = 1;
-    std::vector<LLp*>* colspace = new std::vector<LLp*>();
+    std::vector<PriorityElement*>* colspace = new std::vector<PriorityElement*>();
     std::mt19937_64 rand_generator;
     std::uniform_real_distribution<float> u_distribution(0, 1);
     while(it < n){
         // std::cout << "looop " << it << std::endl;
-        float i = approxCholPQPop(pq);
+        float i = DegreePQPop(pq);
 
         ldli->col.push_back(i);
         ldli->colptr.push_back(ldli_row_ptr);
@@ -627,10 +627,10 @@ LDLi* PriorityPreconditioner::getLDLi(){
         float colScale = 1;
 
         for(int joffset = 0; joffset < len-1; joffset++){
-            LLp* ll = colspace->at(joffset);
+            PriorityElement* ll = colspace->at(joffset);
             float w = vals.at(joffset) * colScale;
             float j = ll->row;
-            LLp* revj = ll->reverse;
+            PriorityElement* revj = ll->reverse;
             float f = float(w)/wdeg;
             vals.at(joffset) = 0;
 
@@ -645,7 +645,7 @@ LDLi* PriorityPreconditioner::getLDLi(){
             }
             float k = colspace->at(koff)->row;
 
-            approxCholPQInc(pq, k);
+            DegreePQInc(pq, k);
 
             float newEdgeVal = f*(1-f)*wdeg;
 
@@ -655,7 +655,7 @@ LDLi* PriorityPreconditioner::getLDLi(){
             revj->reverse = ll;
 
             // row j in col k
-            LLp* khead = a->cols.at(k);
+            PriorityElement* khead = a->cols.at(k);
             a->cols.at(k) = ll;
             ll->next = khead;
             ll->reverse = revj;
@@ -670,12 +670,12 @@ LDLi* PriorityPreconditioner::getLDLi(){
             ldli_row_ptr += 1;
         }
 
-        LLp* ll = colspace->at(len-1);
+        PriorityElement* ll = colspace->at(len-1);
         float w = vals.at(len-1)*colScale;
         float j = ll->row;
-        LLp* revj = ll->reverse;
+        PriorityElement* revj = ll->reverse;
         if(it < n){
-            approxCholPQDec(pq, j);
+            DegreePQDec(pq, j);
         }
         revj->val = 0;
 
