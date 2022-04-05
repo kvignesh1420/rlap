@@ -7,7 +7,7 @@
 #include "rlap/cc/types.h"
 #include "rlap/cc/preconditioner.h"
 
-#define BLOCK_SIZE 125000
+#define BLOCK_SIZE 1000000
 
 Eigen::SparseMatrix<float>* getAdjacencyMatrix(std::string filepath, int nrows, int ncols){
     Reader* r = new TSVReader(filepath, nrows, ncols);
@@ -25,11 +25,11 @@ Eigen::SparseMatrix<float>* getAdjacencyMatrix(std::string filepath, int nrows, 
 
 int main(){
 
-    int N = 125000;
-    std::string filepath = "data/grid50.tsv";
+    int N = 1000000;
+    std::string filepath = "data/grid100.tsv";
 
     Eigen::SparseMatrix<float>* A = getAdjacencyMatrix(filepath, N, N);
-    // std::cout << *A << std::endl;
+    std::cout << "nnz(A) = " << A->nonZeros() << std::endl;
     ApproximateCholesky fact = ApproximateCholesky(A);
     fact.compute();
     Eigen::SparseMatrix<float> L = fact.getLaplacian();

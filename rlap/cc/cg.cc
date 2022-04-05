@@ -2,6 +2,7 @@
 #include "third_party/eigen3/Eigen/SparseCholesky"
 #include "third_party/eigen3/Eigen/Core"
 #include <iostream>
+#include <chrono>
 #include "cg.h"
 #include "types.h"
 
@@ -52,6 +53,7 @@ PConjugateGradient::PConjugateGradient(Eigen::SparseMatrix<float>* M, Eigen::Vec
 
 Eigen::VectorXf PConjugateGradient::solve(float tolerance, int max_iters){
     // std::cout << "tolerance = " << tolerance << " max_iters = " << max_iters << std::endl;
+    auto start_time = std::chrono::steady_clock::now();
     int stag_test = 5;
 
     double al;
@@ -139,6 +141,9 @@ Eigen::VectorXf PConjugateGradient::solve(float tolerance, int max_iters){
         // std::cout<< " oldrho = " << oldrho << " rho = " << rho << " beta= " << beta << std::endl;
     }
     std::cout << "CG stopped after Iteration count = " << iter_count << " with error = " << r.norm()/nb << std::endl;
+    auto end_time = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end_time - start_time;
+    std::cout << "elapsed time: " << elapsed_seconds.count() << "s\n";
     return best_x;
 }
 
