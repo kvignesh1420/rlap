@@ -169,10 +169,12 @@ Eigen::VectorXf PConjugateGradient::applyPreconditioner(Eigen::VectorXf b){
             y.coeffRef(j) += _ldli->fval.at(jj)*yi;
             yi *= (1-_ldli->fval.at(jj));
         }
-        float j = _ldli->rowval.at(j1);
-        // std::cout << "j = " << j << std::endl;
-        y.coeffRef(j) += yi;
-        y.coeffRef(i) = yi;
+        if(j1 >= 0){
+            float j = _ldli->rowval.at(j1);
+            // std::cout << "j = " << j << std::endl;
+            y.coeffRef(j) += yi;
+            y.coeffRef(i) = yi;
+        }
     }
 
     // Diagonal pass
@@ -190,7 +192,9 @@ Eigen::VectorXf PConjugateGradient::applyPreconditioner(Eigen::VectorXf b){
 
         float j0 = _ldli->colptr.at(ii);
         float j1 = _ldli->colptr.at(ii+1)-1;
-
+        if(j1 < 0){
+            continue;
+        }
         float j = _ldli->rowval.at(j1);
         float yi = y.coeff(i);
         yi += y.coeff(j);

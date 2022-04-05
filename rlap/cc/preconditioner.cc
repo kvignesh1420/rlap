@@ -290,7 +290,13 @@ std::vector<float> PriorityPreconditioner::getFlipIndices(Eigen::SparseMatrix<fl
 void PriorityPreconditioner::printFlipIndices(std::vector<float> fi){
     std::cout << "flip indices = " << std::endl;
     for(int i = 0; i < fi.size(); i++){
-        std::cout << fi.at(i) << " ";
+        float val = fi.at(i);
+        if(i != fi.at(val)){
+            std::cout << "flip index mismatch: " << i << " " << val << std::endl;
+        }
+        else{
+            std::cout << "original index: " << i << " flipped index: " << fi.at(i) << " " << std::endl;
+        }
     }
     std::cout << std::endl;
 }
@@ -310,7 +316,14 @@ PriorityMatrix* PriorityPreconditioner::getPriorityMatrix(){
     for(int i = 0; i < n; i++){
         int start_idx = _A->outerIndexPtr()[i];
         int end_idx = _A->outerIndexPtr()[i+1];
-        degs.push_back(end_idx - start_idx);
+        float deg = end_idx - start_idx;
+        degs.push_back(deg);
+        if(deg == 0){
+            // std::cout << " deg[" << i << "] = " <<  end_idx - start_idx << std::endl;
+            PriorityElement* pe = new PriorityElement();
+            cols.push_back(pe);
+            continue;
+        }
         // std::cout << " deg[" << i << "] = " <<  end_idx - start_idx << std::endl;
 
         float j = _A->innerIndexPtr()[start_idx];
@@ -342,7 +355,7 @@ PriorityMatrix* PriorityPreconditioner::getPriorityMatrix(){
     pmat->degs = degs;
     pmat->cols = cols;
     pmat->lles = llelems;
-    // std::cout << "Got LLMAtp" << std::endl;
+    // std::cout << "Got LLMAtp " << "degs size = " << degs.size() << std::endl;
     return pmat;
 }
 
@@ -486,6 +499,9 @@ void PriorityPreconditioner::DegreePQDec(DegreePQ* pq, int i){
     // std::cout << "dec in the PQ " << i << std::endl;
     float n = pq->n;
     float deg_i = pq->elems.at(i)->key;
+    if(deg_i == 1){
+        return;
+    }
     int oldlist = deg_i <= n ? deg_i : n + int(deg_i/n);
     int newlist = deg_i-1 <= n ? deg_i-1 : n + int((deg_i-1)/n);
     // std::cout << " deg_i = " << deg_i << std::endl;
@@ -564,14 +580,14 @@ float PriorityPreconditioner::compressColumn(PriorityMatrix* a, std::vector<Prio
 
     for(int i = 0; i < len; i++){
         if(colspace->at(i)->row != currow){
-            // std::cout << "currrow != colspace[i].row " << currow << " " << colspace->at(i).row << std::endl;
+            // std::cout << "currrow != colspace[i].row " << currow << " " << colspace->at(i)->row << std::endl;
 
             currow = colspace->at(i)->row;
             ptr += 1;
             colspace->at(ptr) = colspace->at(i);
         }
         else{
-            // std::cout << "currrow == colspace[i].row " << currow << std::endl;
+            // std::cout << "currrow == colspace[i]->row " << currow << std::endl;
             colspace->at(ptr)->val += colspace->at(i)->val;
             colspace->at(i)->reverse->val = 0;
 
@@ -670,20 +686,23 @@ LDLi* PriorityPreconditioner::getLDLi(){
             ldli_row_ptr += 1;
         }
 
-        PriorityElement* ll = colspace->at(len-1);
-        float w = vals.at(len-1)*colScale;
-        float j = ll->row;
-        PriorityElement* revj = ll->reverse;
-        if(it < n){
-            DegreePQDec(pq, j);
+        if(len > 0){
+            // std::cout << "len = " << len << "vals len = " << vals.size() << " colspace len = " << colspace->size() << std::endl;
+            PriorityElement* ll = colspace->at(len-1);
+            float w = vals.at(len-1)*colScale;
+            float j = ll->row;
+            PriorityElement* revj = ll->reverse;
+            if(it < n){
+                DegreePQDec(pq, j);
+            }
+            revj->val = 0;
+
+            ldli->rowval.push_back(j);
+            ldli->fval.push_back(1.0);
+            ldli_row_ptr += 1;
+
+            d[i] = w;
         }
-        revj->val = 0;
-
-        ldli->rowval.push_back(j);
-        ldli->fval.push_back(1.0);
-        ldli_row_ptr += 1;
-
-        d[i] = w;
     }
     ldli->colptr.push_back(ldli_row_ptr);
     ldli->d = d;
