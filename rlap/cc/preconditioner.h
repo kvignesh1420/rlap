@@ -5,7 +5,13 @@
 #include "third_party/eigen3/Eigen/SparseCore"
 #include "types.h"
 
-class OrderedPreconditioner{
+class Preconditioner{
+  public:
+    virtual LDLi* getLDLi() = 0;
+    virtual ~Preconditioner() = default;
+};
+
+class OrderedPreconditioner : public Preconditioner{
   public:
     OrderedPreconditioner(Eigen::SparseMatrix<float>* A);
     ~OrderedPreconditioner(){};
@@ -21,7 +27,7 @@ class OrderedPreconditioner{
     OrderedMatrix* _ordmat;
 };
 
-class PriorityPreconditioner{
+class PriorityPreconditioner : public Preconditioner{
   public:
     PriorityPreconditioner(Eigen::SparseMatrix<float>* A);
     ~PriorityPreconditioner(){};

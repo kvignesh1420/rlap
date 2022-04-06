@@ -3,9 +3,11 @@
 #include <functional>
 #include <random>
 #include <stdexcept>
+#include <string>
 #include "third_party/eigen3/Eigen/SparseCore"
 #include "preconditioner.h"
 #include "types.h"
+#include "tracer.h"
 
 #define PTR_RESET -1
 
@@ -53,9 +55,8 @@ OrderedMatrix* OrderedPreconditioner::getOrderedMatrix(){
 }
 
 float OrderedPreconditioner::getColumnLength(OrderedMatrix* ordmat, int i, std::vector<ColumnElement>* colspace){
-    // std::cout << "get col length" << std::endl;
+    // TRACER("get col length for column %d \n", i);
     float ptr = ordmat->cols[i];
-    // std::cout << "current ptr = " << ptr << std::endl;
     float len = 0;
     while(ptr != PTR_RESET){
         len += 1;
@@ -74,6 +75,7 @@ float OrderedPreconditioner::getColumnLength(OrderedMatrix* ordmat, int i, std::
         }
         ptr = ordmat->elements[ptr]->next;
     }
+    // TRACER("got col length = %f\n", len);
     return len;
 }
 
@@ -109,7 +111,7 @@ void OrderedPreconditioner::printMatrixDetails(OrderedMatrix* ordmat){
 }
 
 float OrderedPreconditioner::compressColumn(std::vector<ColumnElement>* colspace, float len){
-    // std::cout << "Compressing col" << std::endl;
+    // TRACER("Compressing col of len = %f \n", len);
 
     std::sort(colspace->begin(), colspace->begin()+len,
          [](ColumnElement a, ColumnElement b) {return a.row < b.row; });
@@ -146,7 +148,7 @@ float OrderedPreconditioner::compressColumn(std::vector<ColumnElement>* colspace
     colspace->at(ptr) = item;
     std::sort(colspace->begin(), colspace->begin()+ptr+1,
          [](ColumnElement a, ColumnElement b) {return a.val < b.val; });
-
+    // TRACER("Compressed col to len = %f \n", ptr+1);
     return ptr+1;
 }
 
@@ -193,7 +195,7 @@ LDLi* OrderedPreconditioner::getLDLi(){
 
             float u_r = u_distribution(rand_generator);
             float r = u_r*(csum  - cumspace[joffset]) + cumspace[joffset];
-            float koff=-1;
+            float koff=0;
             for(int k_i = 0; k_i < len; k_i++){
                 if(cumspace[k_i]>r){
                     koff = k_i;
@@ -233,6 +235,7 @@ LDLi* OrderedPreconditioner::getLDLi(){
             ldli_row_ptr += 1;
         }
 
+        // TRACER("handling last element in column %d of len %f\n", i, len);
         ColumnElement ce = colspace->at(len-1);
         float w = ce.val*colScale;
         float j = ce.row;
@@ -652,7 +655,7 @@ LDLi* PriorityPreconditioner::getLDLi(){
 
             float u_r = u_distribution(rand_generator);
             float r = u_r*(csum  - cumspace[joffset]) + cumspace[joffset];
-            float koff = -1;
+            float koff = 0;
             for(int k_i = 0; k_i < len; k_i++){
                 if(cumspace[k_i]>r){
                     koff = k_i;

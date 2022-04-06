@@ -30,7 +30,10 @@ int main(){
 
     Eigen::SparseMatrix<float>* A = getAdjacencyMatrix(filepath, N, N);
     std::cout << "nnz(A) = " << A->nonZeros() << std::endl;
-    ApproximateCholesky fact = ApproximateCholesky(A);
+    // initialize the factorizer, the default preconditioner is
+    // the DegreePreconditioner, other options include:
+    // "order" for OrderedPreconditioner
+    ApproximateCholesky fact = ApproximateCholesky(/* *Adj= */A, /*pre=*/"degree");
 
     // retrieve the computed laplacian
     Eigen::SparseMatrix<float> L = fact.getLaplacian();

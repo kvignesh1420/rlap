@@ -5,6 +5,7 @@
 #include "third_party/eigen3/Eigen/SparseCholesky"
 #include "third_party/eigen3/Eigen/Core"
 #include <vector>
+#include <string>
 #include "samplers.h"
 #include "types.h"
 
@@ -94,20 +95,20 @@ class NaiveApproximateCholesky: public Factorizer{
 // end of reference/benchmark factorizers
 
 // The main factorizers should be implemented below
-// These will be exposed as python classes for simple interoperable
+// These will be exposed as python classes for interoperable
 // usage with numpy/scipy.
 class ApproximateCholesky: public Factorizer{
   public:
     // approximate cholesky factorization from the ground up
-    ApproximateCholesky(Eigen::SparseMatrix<float>* Adj);
-    ApproximateCholesky(Eigen::SparseMatrix<float> Adj);
+    ApproximateCholesky(Eigen::SparseMatrix<float>* Adj, std::string pre = "degree");
+    ApproximateCholesky(Eigen::SparseMatrix<float> Adj, std::string pre = "degree");
     // A constructor which enables the user to just pass the
     // tsv/csv file for the adjacency matrix of the graph.
     // This reduces the overhead of copying scipy csc matrices
     // from the python layer to the c++ layer.
-    ApproximateCholesky(std::string filename, int nrows, int ncols);
+    ApproximateCholesky(std::string filename, int nrows, int ncols, std::string pre = "degree");
     ~ApproximateCholesky(){};
-    // retrive the adjancency matrix. helpful if factorizer was
+    // retrieve the adjancency matrix. helpful if factorizer was
     // initialized with a filename and dimension
     Eigen::SparseMatrix<float> getAdjacencyMatrix();
     // compute the pre-conditioning info for solvers
@@ -124,6 +125,7 @@ class ApproximateCholesky: public Factorizer{
     Eigen::SparseMatrix<float>* _A;
     Eigen::SparseMatrix<float>* _L;
     LDLi* _ldli;
+    std::string _pre_str;
 };
 
 

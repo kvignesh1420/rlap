@@ -11,6 +11,7 @@
 #include "cg.h"
 #include "reader.h"
 #include "preconditioner.h"
+#include "tracer.h"
 
 #define PTR_RESET -1
 
@@ -162,22 +163,25 @@ Eigen::MatrixXf NaiveApproximateCholesky::getReconstructedLaplacian(){
 
 // ApproximateCholesky
 
-ApproximateCholesky::ApproximateCholesky(Eigen::SparseMatrix<float>* Adj){
+ApproximateCholesky::ApproximateCholesky(Eigen::SparseMatrix<float>* Adj, std::string pre){
     _A = Adj;
     _L = this->computeLaplacian(_A);
+    _pre_str = pre;
     this->compute();
 }
 
-ApproximateCholesky::ApproximateCholesky(Eigen::SparseMatrix<float> Adj){
+ApproximateCholesky::ApproximateCholesky(Eigen::SparseMatrix<float> Adj, std::string pre){
     _A = &Adj;
     _L = this->computeLaplacian(_A);
+    _pre_str = pre;
     this->compute();
 }
 
-ApproximateCholesky::ApproximateCholesky(std::string filename, int nrows, int ncols){
+ApproximateCholesky::ApproximateCholesky(std::string filename, int nrows, int ncols, std::string pre){
     Reader* r = new TSVReader(filename, nrows, ncols);
     _A = r->Read();
     _L = this->computeLaplacian(_A);
+    _pre_str = pre;
     this->compute();
 }
 
@@ -193,7 +197,16 @@ Eigen::VectorXf ApproximateCholesky::solve(Eigen::VectorXf b){
 }
 
 void ApproximateCholesky::compute(){
-    PriorityPreconditioner* prec = new PriorityPreconditioner(_A);
+    Preconditioner* prec;
+    if(_pre_str == "order"){
+        TRACER("using OrderedPreconditioner\n");
+        prec = new OrderedPreconditioner(_A);
+    }
+    else{
+        // default option
+        TRACER("using PriorityPreconditioner\n");
+        prec = new PriorityPreconditioner(_A);
+    }
     _ldli = prec->getLDLi();
 }
 

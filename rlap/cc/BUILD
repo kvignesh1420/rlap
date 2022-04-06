@@ -38,6 +38,7 @@ cc_library(
         ":cg",
         ":reader",
         ":preconditioner",
+        ":tracer",
         "//third_party/eigen3"
     ],
     visibility = ["//visibility:public"]
@@ -49,6 +50,7 @@ cc_library(
     hdrs = ["cg.h"],
     deps = [
         ":types",
+        ":tracer",
         "//third_party/eigen3"
     ],
     visibility = ["//visibility:public"]
@@ -60,6 +62,7 @@ cc_library(
     hdrs = ["preconditioner.h"],
     deps = [
         ":types",
+        ":tracer",
         "//third_party/eigen3"
     ],
     visibility = ["//visibility:public"]
