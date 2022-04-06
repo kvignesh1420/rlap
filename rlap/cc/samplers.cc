@@ -8,7 +8,7 @@
 #include <functional>
 #include "samplers.h"
 
-Eigen::MatrixXf ExactCliqueSampler::sampleClique(Eigen::SparseMatrix<float>& L, int i){
+Eigen::MatrixXd ExactCliqueSampler::sampleClique(Eigen::SparseMatrix<double>& L, int i){
     std::vector<int> N_i;
     for(int k = 0; k < L.cols(); k++){
         if(i!=k && std::abs(L.coeff(i, k)) >= 1e-8 ){
@@ -16,7 +16,7 @@ Eigen::MatrixXf ExactCliqueSampler::sampleClique(Eigen::SparseMatrix<float>& L, 
         }
     }
     // std::cout << "Node " << i << " has neighbour count = "<< N_i.size() << std::endl;
-    Eigen::SparseMatrix<float> D_ts(L.rows(), L.cols()*(L.cols()-1));
+    Eigen::SparseMatrix<double> D_ts(L.rows(), L.cols()*(L.cols()-1));
     D_ts.reserve(Eigen::VectorXi::Constant(L.cols()*(L.cols()-1), 2));
     int edge_idx = 0;
     for(int t = 0; t < N_i.size(); t++){
@@ -24,7 +24,7 @@ Eigen::MatrixXf ExactCliqueSampler::sampleClique(Eigen::SparseMatrix<float>& L, 
             if(s==t){
                 continue;
             }
-            float updated_wt = (L.coeff(i, N_i[t])*L.coeff(i, N_i[t])/L.coeff(i, i));
+            double updated_wt = (L.coeff(i, N_i[t])*L.coeff(i, N_i[t])/L.coeff(i, i));
             D_ts.insert(N_i[t], edge_idx) = 1.0 * std::sqrt(updated_wt);
             D_ts.insert(N_i[s], edge_idx) = -1.0 * std::sqrt(updated_wt);
             edge_idx += 1;
@@ -37,9 +37,9 @@ Eigen::MatrixXf ExactCliqueSampler::sampleClique(Eigen::SparseMatrix<float>& L, 
     return (D_ts * D_ts.transpose())/2;
 }
 
-Eigen::MatrixXf WeightedCliqueSampler::sampleClique(Eigen::SparseMatrix<float>& L, int i){
+Eigen::MatrixXd WeightedCliqueSampler::sampleClique(Eigen::SparseMatrix<double>& L, int i){
     std::vector<int> N_i;
-    std::vector<float> N_w;
+    std::vector<double> N_w;
     for(int k = 0; k < L.cols(); k++){
         if(i!=k && std::abs(L.coeff(i, k)) >= 1e-8 ){
             N_i.push_back(k);
@@ -52,19 +52,19 @@ Eigen::MatrixXf WeightedCliqueSampler::sampleClique(Eigen::SparseMatrix<float>& 
 
     std::uniform_int_distribution<int> u_distribution(0, N_i.size()-1);
 
-    Eigen::SparseMatrix<float> D_ts(L.rows(), L.cols());
+    Eigen::SparseMatrix<double> D_ts(L.rows(), L.cols());
     D_ts.reserve(Eigen::VectorXi::Constant(L.cols(), 2));
     int edge_idx = 0;
     while(edge_idx < N_i.size()-1){
         int n1 = N_i[(int)p_distribution(rand_generator)];
         int n2 = N_i[(int)u_distribution(rand_generator)];
-        float w_i_n1 = std::abs(L.coeff(i, n1));
-        float w_i_n2 = std::abs(L.coeff(i, n2));
+        double w_i_n1 = std::abs(L.coeff(i, n1));
+        double w_i_n2 = std::abs(L.coeff(i, n2));
         // std::cout << "N1 = " << n1 << " WN1 = " << w_i_n1 << " N2 = " << n2 << " WN2 = " << w_i_n2 << std::endl;
         if(n1==n2 || w_i_n1 < 1e-8 || w_i_n2 < 1e-8){
             continue;
         }
-        float scaled_wt = (w_i_n1*w_i_n2)/(w_i_n1 + w_i_n2);
+        double scaled_wt = (w_i_n1*w_i_n2)/(w_i_n1 + w_i_n2);
         D_ts.insert(n1, edge_idx) = 1.0 * std::sqrt(scaled_wt);
         D_ts.insert(n2, edge_idx) = -1.0 * std::sqrt(scaled_wt);
         edge_idx += 1;

@@ -7,14 +7,14 @@
 class Reader{
   public:
     // read data and return the Eigen matrix representation of the data
-    virtual Eigen::SparseMatrix<float>* Read() = 0;
+    virtual Eigen::SparseMatrix<double>* Read() = 0;
 };
 
 class TSVReader : public Reader{
   public:
     // A reader to parse tsv files and prepare the adjacency matrix
     TSVReader(std::string filename, int nrows, int ncols);
-    Eigen::SparseMatrix<float>* Read() override;
+    Eigen::SparseMatrix<double>* Read() override;
   private:
     std::string _filename;
     int _nrows, _ncols;

@@ -6,31 +6,31 @@
 #include "cg.h"
 #include "types.h"
 
-ConjugateGradient::ConjugateGradient(Eigen::MatrixXf M, Eigen::VectorXf b){
+ConjugateGradient::ConjugateGradient(Eigen::MatrixXd M, Eigen::VectorXd b){
     _M = M;
     _b = b;
 }
 
-Eigen::VectorXf ConjugateGradient::solve(float tolerance, int max_iters){
-    Eigen::VectorXf x = Eigen::VectorXf::Zero(_b.size());
-    Eigen::VectorXf r = _b;
-    Eigen::VectorXf p = r;
+Eigen::VectorXd ConjugateGradient::solve(double tolerance, int max_iters){
+    Eigen::VectorXd x = Eigen::VectorXd::Zero(_b.size());
+    Eigen::VectorXd r = _b;
+    Eigen::VectorXd p = r;
     for(int i = 0; i < max_iters; i++){
         // calculate the step length
-        float den = float(p.transpose() * _M * p);
+        double den = double(p.transpose() * _M * p);
         if(den <= 1e-14 || std::isinf(den)){
             std::cout << "CG: Early stopping due to large or small den for alpha" << std::endl;
             std::cout << "CG: Iteration count = " << i+1 << std::endl;
             break;
         }
-        float alpha = float(r.transpose() * r) / float(p.transpose() * _M * p);
+        double alpha = double(r.transpose() * r) / double(p.transpose() * _M * p);
         // std::cout << "Alpha = " << alpha << std::endl;
         // approximate the solution by moving in the search direction
         x = x + alpha * p;
         // calculate the residual
-        Eigen::VectorXf r_n = r - alpha * _M * p;
+        Eigen::VectorXd r_n = r - alpha * _M * p;
         // improvement in this direction
-        float beta = float(r_n.transpose() * r_n)/float(r.transpose() * r);
+        double beta = double(r_n.transpose() * r_n)/double(r.transpose() * r);
         // std::cout << "Beta = " << beta << std::endl;
         // update the search direction
         p = r_n + beta * p;
@@ -46,12 +46,12 @@ Eigen::VectorXf ConjugateGradient::solve(float tolerance, int max_iters){
     return x;
 }
 
-PConjugateGradient::PConjugateGradient(Eigen::SparseMatrix<float>* M, Eigen::VectorXf* b){
+PConjugateGradient::PConjugateGradient(Eigen::SparseMatrix<double>* M, Eigen::VectorXd* b){
     _M = *M;
     _b = *b;
 }
 
-Eigen::VectorXf PConjugateGradient::solve(float tolerance, int max_iters){
+Eigen::VectorXd PConjugateGradient::solve(double tolerance, int max_iters){
     // std::cout << "tolerance = " << tolerance << " max_iters = " << max_iters << std::endl;
     auto start_time = std::chrono::steady_clock::now();
     int stag_test = 5;
@@ -60,17 +60,16 @@ Eigen::VectorXf PConjugateGradient::solve(float tolerance, int max_iters){
     double n = _M.cols();
     double nb = _b.norm();
     if(nb == 0){
-        return Eigen::VectorXf::Zero(_b.size());
+        return Eigen::VectorXd::Zero(_b.size());
     }
 
-    Eigen::VectorXf x = Eigen::VectorXf::Zero(n);
-    Eigen::VectorXf best_x = Eigen::VectorXf::Zero(n);
+    Eigen::VectorXd x = Eigen::VectorXd::Zero(n);
+    Eigen::VectorXd best_x = Eigen::VectorXd::Zero(n);
     double bestnr = 1.0;
 
-    Eigen::VectorXf r = _b;
-    Eigen::VectorXf z = this->applyPreconditioner(r);
-    // Eigen::VectorXf z = r;
-    Eigen::VectorXf p = z;
+    Eigen::VectorXd r = _b;
+    Eigen::VectorXd z = this->applyPreconditioner(r);
+    Eigen::VectorXd p = z;
 
     double rho = r.dot(z);
     double best_rho = rho;
@@ -80,7 +79,7 @@ Eigen::VectorXf PConjugateGradient::solve(float tolerance, int max_iters){
     while(iter_count < max_iters){
         iter_count += 1;
         // std::cout << "CG ITER COUNT = " << iter_count << std::endl;
-        Eigen::VectorXf q = _M * p;
+        Eigen::VectorXd q = _M * p;
         double pq = p.dot(q);
         if(pq <= 1e-16 || std::isinf(pq)){
             std::cout << "CG: Early stopping due to large or small pq" << std::endl;
@@ -111,7 +110,6 @@ Eigen::VectorXf PConjugateGradient::solve(float tolerance, int max_iters){
         }
 
         z = this->applyPreconditioner(r);
-        // z = r;
         double oldrho = rho;
         rho = z.dot(r);
         if(rho < best_rho*(1-1/stag_test)){
@@ -151,36 +149,38 @@ void PConjugateGradient::setPreconditioner(LDLi* ldli){
     _ldli = ldli;
 }
 
-Eigen::VectorXf PConjugateGradient::applyPreconditioner(Eigen::VectorXf b){
+Eigen::VectorXd PConjugateGradient::applyPreconditioner(Eigen::VectorXd b){
 
-    Eigen::VectorXf y = b;
+    Eigen::VectorXd y = b;
     // Forward pass
     // std::cout << "col len = " << _ldli->col.size() << " colptr len = " << _ldli->colptr.size();
     // std::cout << " fval len = " << _ldli->fval.size() << " rowval len = " << _ldli->rowval.size() << " d len = " << _ldli->d.size() << std::endl;
     // std::cout << "FORWARD PASS" << std::endl;
     for(int ii = 0; ii < _ldli->col.size(); ii++){
-        float i = _ldli->col.at(ii);
+        double i = _ldli->col.at(ii);
         // std::cout << "i = " << i << std::endl;
-        float j0 = _ldli->colptr.at(ii);
+        double j0 = _ldli->colptr.at(ii);
         // std::cout << "j0 = " << j0 << std::endl;
-        float j1 = _ldli->colptr.at(ii+1)-1;
+        double j1 = _ldli->colptr.at(ii+1)-1;
         // std::cout << "j1 = " << j1 << std::endl;
-        float yi = y.coeff(i);
+        double yi = y.coeff(i);
 
         for(int jj = j0; jj < j1; jj++){
-            float j = _ldli->rowval.at(jj);
+            double j = _ldli->rowval.at(jj);
             // std::cout << "j = " << j << std::endl;
             // std::cout << "fval = " << _ldli->fval.at(jj) << std::endl;
             y.coeffRef(j) += _ldli->fval.at(jj)*yi;
             yi *= (1-_ldli->fval.at(jj));
         }
         if(j1 >= 0){
-            float j = _ldli->rowval.at(j1);
+            double j = _ldli->rowval.at(j1);
             // std::cout << "j = " << j << std::endl;
             y.coeffRef(j) += yi;
             y.coeffRef(i) = yi;
         }
     }
+    // std::cout << "FP Norm of y = " << y.norm() << std::endl;
+    // std::cout << "FP Mean of y = " << y.mean() << std::endl;
 
     // Diagonal pass
     // std::cout << "DIAGONAL PASS" << std::endl;
@@ -190,29 +190,35 @@ Eigen::VectorXf PConjugateGradient::applyPreconditioner(Eigen::VectorXf b){
         }
     }
 
+    // std::cout << "D Norm of y = " << y.norm() << std::endl;
+    // std::cout << "D Mean of y = " << y.mean() << std::endl;
+
     // Backward pass
     // std::cout << "BACKWARD PASS" << std::endl;
     for(int ii = _ldli->col.size()-1; ii > -1 ; ii--){
-        float i = _ldli->col.at(ii);
+        double i = _ldli->col.at(ii);
 
-        float j0 = _ldli->colptr.at(ii);
-        float j1 = _ldli->colptr.at(ii+1)-1;
+        double j0 = _ldli->colptr.at(ii);
+        double j1 = _ldli->colptr.at(ii+1)-1;
         if(j1 < 0){
             continue;
         }
-        float j = _ldli->rowval.at(j1);
-        float yi = y.coeff(i);
+        double j = _ldli->rowval.at(j1);
+        double yi = y.coeff(i);
         yi += y.coeff(j);
 
         for(int jj = j1-1; jj > j0-1; jj--){
-            float j = _ldli->rowval.at(jj);
+            double j = _ldli->rowval.at(jj);
             yi = ( 1 - _ldli->fval.at(jj) )*yi + _ldli->fval.at(jj)*y.coeff(j);
         }
         y.coeffRef(i) = yi;
     }
 
-    float y_mean = y.mean();
-    y = y - Eigen::VectorXf::Ones(y.size())*y_mean;
+    // std::cout << "BP Norm of y = " << y.norm() << std::endl;
+    // std::cout << "BP Mean of y = " << y.mean() << std::endl;
+
+    double y_mean = y.mean();
+    y = y - Eigen::VectorXd::Ones(y.size())*y_mean;
     return y;
 }
 

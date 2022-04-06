@@ -10,7 +10,7 @@ TSVReader::TSVReader(std::string filename, int nrows, int ncols){
     _ncols = ncols;
 }
 
-Eigen::SparseMatrix<float>* TSVReader::Read(){
+Eigen::SparseMatrix<double>* TSVReader::Read(){
     std::ifstream _ifile;
 
     _ifile.open(_filename);
@@ -18,14 +18,14 @@ Eigen::SparseMatrix<float>* TSVReader::Read(){
         std::cerr << "Error: The input file couldn't be opened" << std::endl;
         exit(1);
     }
-    Eigen::SparseMatrix<float>* Adj = new Eigen::SparseMatrix<float>(_nrows, _ncols);
-    std::vector<Eigen::Triplet<float> > triplets;
-    int i, j; float v;
+    Eigen::SparseMatrix<double>* Adj = new Eigen::SparseMatrix<double>(_nrows, _ncols);
+    std::vector<Eigen::Triplet<double> > triplets;
+    int i, j; double v;
     while(_ifile >> i >> j >> v){
         // Do not store the 0 values as Eigen::SparseMatrix will treat it
         // as nnz even though technically the value is zero.
         if(v != 0){
-            triplets.push_back(Eigen::Triplet<float>(i-1, j-1, v));
+            triplets.push_back(Eigen::Triplet<double>(i-1, j-1, v));
         }
     }
     Adj->setFromTriplets(triplets.begin(), triplets.end());

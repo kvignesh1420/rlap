@@ -3,6 +3,12 @@
 
 #include <vector>
 
+// double precision is used for Eigen matrices due to it's high precision and
+// enables pcg to converge quickly.
+// For instance, when using Xf in Eigen with grid graph of 1e6 x 1e6, pcg converged
+// in around ~385 iterations, however when using Xd, it converged in ~22 iterations due
+// to increased precision.
+
 typedef struct PriorityElement{
     // Represents an element of a matrix along with the
     // information about the next and previous elements in
@@ -10,10 +16,10 @@ typedef struct PriorityElement{
     // are optimized for sparse matrices with compressed column storage.
 
     // row number of the element
-    float row;
+    double row;
 
     // nnz value of the element
-    float val;
+    double val;
 
     // pointer to the next element in the column
     PriorityElement* next;
@@ -28,19 +34,19 @@ typedef struct PriorityElement{
         next = this;
         reverse = this;
     }
-    PriorityElement(float _row, float _val, PriorityElement* _next, PriorityElement* _reverse){
+    PriorityElement(double _row, double _val, PriorityElement* _next, PriorityElement* _reverse){
         row = _row;
         val = _val;
         next = _next;
         reverse = _reverse;
     }
-    PriorityElement(float _row, float _val){
+    PriorityElement(double _row, double _val){
         row = _row;
         val = _val;
         next = this;
         reverse = this;
     }
-    PriorityElement(float _row, float _val, PriorityElement* _next){
+    PriorityElement(double _row, double _val, PriorityElement* _next){
         row = _row;
         val = _val;
         next = _next;
@@ -54,10 +60,10 @@ typedef struct PriorityMatrix{
     // along with information on the degrees of the graph nodes.
 
     // number of columns = number of nodes in the graph
-    float n;
+    double n;
 
     // degrees of the node(s) = number of nnz values in column(s)
-    std::vector<float> degs;
+    std::vector<double> degs;
 
     // pointers to `PriorityElement` which start the column
     std::vector<PriorityElement*> cols;
@@ -83,15 +89,15 @@ typedef struct DegreePQElement{
     // index of the `DegreePQElement` in `DegreePQ.elems` which is
     // placed before the current `DegreePQElement` in the queue for
     // degree d.
-    float prev;
+    double prev;
 
     // index of the `DegreePQElement` in `DegreePQ.elems` which is
     // placed after the current `DegreePQElement` in the queue for
     // degree d.
-    float next;
+    double next;
 
     // value of the `DegreePQElement`.
-    float key;
+    double key;
 } DegreePQElement;
 
 typedef struct DegreePQ{
@@ -106,17 +112,17 @@ typedef struct DegreePQ{
     // by default `lists` is filled with -1 and the index of the
     // `DegreePQElement` with a certain degree (d) that will be eliminated
     // is stored at index (d) in `lists`.
-    std::vector<float> lists;
+    std::vector<double> lists;
 
     // represents the min-degree of all degrees of the nodes in the graph, i.e
     // the column with the least number of nnz values.
-    float minlist;
+    double minlist;
 
     // number of items in the queue
-    float nitems;
+    double nitems;
 
     // total number of nodes in the graph = number of columns in the graph.
-    float n;
+    double n;
 } DegreePQ;
 
 
@@ -127,13 +133,13 @@ typedef struct OrderedElement{
     // are optimized for sparse matrices with compressed column storage.
 
     // represents the row number of the nnz element
-    float row;
+    double row;
 
     // points to the next nnz element in the column
-    float next;
+    double next;
 
     // the nnz value of the element
-    float val;
+    double val;
 } OrderedElement;
 
 typedef struct OrderedMatrix{
@@ -143,11 +149,11 @@ typedef struct OrderedMatrix{
     // OrderedElement's where a particular column starts.
 
     // number of columns
-    float n;
+    double n;
 
     // a vector to maintain the indices of
     // OrderedElement's where a particular column starts.
-    std::vector<float> cols;
+    std::vector<double> cols;
 
     // a vector to maintain the OrderedElemnts of the matrix
     std::vector<OrderedElement*> elements;
@@ -164,13 +170,13 @@ typedef struct ColumnElement{
     // ColumnElement for column processing.
 
      // represents the row number of the nnz element
-    float row;
+    double row;
 
     // points to the next nnz element in the column
-    float ptr;
+    double ptr;
 
     // the nnz value of the element
-    float val;
+    double val;
 } ColumnElement;
 
 typedef struct LDLi{
@@ -179,21 +185,21 @@ typedef struct LDLi{
     // equations.
 
     // a vector of column numbers
-    std::vector<float> col;
+    std::vector<double> col;
 
     // a vector to represent where in `rowval`,
     // a particular column starts.
-    std::vector<float> colptr;
+    std::vector<double> colptr;
 
     // a vector of row numbers of nnz values
-    std::vector<float> rowval;
+    std::vector<double> rowval;
 
     // the fractional weight of a particular edge
     // for approximating a clique.
-    std::vector<float> fval;
+    std::vector<double> fval;
 
     // a vector of diagonal elements of D
-    std::vector<float> d;
+    std::vector<double> d;
 } LDLi;
 
 #endif

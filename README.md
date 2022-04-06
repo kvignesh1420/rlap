@@ -33,18 +33,18 @@ int main(){
     int N = 1000000; // number of rows/cols
     std::string filepath = "data/grid100.tsv";
     Reader* r = new TSVReader(filepath, N, N);
-    Eigen::SparseMatrix<float>* A = r->Read();
+    Eigen::SparseMatrix<double>* A = r->Read();
 
     // initialize the factorizer
     ApproximateCholesky fact = ApproximateCholesky(A);
 
     // retrieve the laplacian of the graph
-    Eigen::SparseMatrix<float> L = fact.getLaplacian();
+    Eigen::SparseMatrix<double> L = fact.getLaplacian();
     // generate random b vector
-    Eigen::VectorXf b = Eigen::VectorXf::Random(BLOCK_SIZE);
+    Eigen::VectorXd b = Eigen::VectorXd::Random(BLOCK_SIZE);
     // normalize b
-    float b_mean = b.mean();
-    Eigen::VectorXf b_m = b - Eigen::VectorXf::Ones(b.size())*b_mean;
+    double b_mean = b.mean();
+    Eigen::VectorXd b_m = b - Eigen::VectorXd::Ones(b.size())*b_mean;
 
     // solve Lx = b_m with pre-conditioned conjugate descent
     x = fact.solve(b_m);

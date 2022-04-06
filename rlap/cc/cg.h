@@ -9,24 +9,24 @@
 
 class ConjugateGradient{
   public:
-    ConjugateGradient(Eigen::MatrixXf M, Eigen::VectorXf b);
+    ConjugateGradient(Eigen::MatrixXd M, Eigen::VectorXd b);
     ~ConjugateGradient(){};
-    Eigen::VectorXf solve(float tolerance=1e-6, int max_iters=1000);
+    Eigen::VectorXd solve(double tolerance=1e-6, int max_iters=1000);
   private:
-    Eigen::MatrixXf _M;
-    Eigen::VectorXf _b;
+    Eigen::MatrixXd _M;
+    Eigen::VectorXd _b;
 };
 
 class PConjugateGradient{
   public:
-    PConjugateGradient(Eigen::SparseMatrix<float>* M, Eigen::VectorXf* b);
+    PConjugateGradient(Eigen::SparseMatrix<double>* M, Eigen::VectorXd* b);
     ~PConjugateGradient(){};
-    Eigen::VectorXf solve(float tolerance, int max_iters=1000);
+    Eigen::VectorXd solve(double tolerance, int max_iters=1000);
     void setPreconditioner(LDLi* ldli);
-    Eigen::VectorXf applyPreconditioner(Eigen::VectorXf b);
+    Eigen::VectorXd applyPreconditioner(Eigen::VectorXd b);
   private:
-    Eigen::SparseMatrix<float> _M;
-    Eigen::VectorXf _b;
+    Eigen::SparseMatrix<double> _M;
+    Eigen::VectorXd _b;
     LDLi* _ldli;
 };
 

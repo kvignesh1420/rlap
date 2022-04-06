@@ -7,18 +7,18 @@
 #include "rlap/cc/types.h"
 #include "rlap/cc/preconditioner.h"
 
-Eigen::SparseMatrix<float>* getAdjacencyMatrix(std::string filepath, int nrows, int ncols){
+Eigen::SparseMatrix<double>* getAdjacencyMatrix(std::string filepath, int nrows, int ncols){
     Reader* r = new TSVReader(filepath, nrows, ncols);
-    Eigen::SparseMatrix<float>* A = r->Read();
+    Eigen::SparseMatrix<double>* A = r->Read();
     return A;
 }
 
 int main(){
 
-    int N = 125000;
-    std::string filepath = "data/grid50.tsv";
+    int N = 1000000;
+    std::string filepath = "data/grid100.tsv";
 
-    Eigen::SparseMatrix<float>* A = getAdjacencyMatrix(filepath, N, N);
+    Eigen::SparseMatrix<double>* A = getAdjacencyMatrix(filepath, N, N);
     std::cout << "nnz(A) = " << A->nonZeros() << std::endl;
     // initialize the factorizer, the default preconditioner is
     // the DegreePreconditioner, other options include:
@@ -26,22 +26,24 @@ int main(){
     ApproximateCholesky fact = ApproximateCholesky(/* *Adj= */A, /*pre=*/"degree");
 
     // retrieve the computed laplacian
-    Eigen::SparseMatrix<float> L = fact.getLaplacian();
+    Eigen::SparseMatrix<double> L = fact.getLaplacian();
     LDLi* ldli = fact.getPreconditioner();
 
-    Eigen::VectorXf x(N);
+    Eigen::VectorXd x(N);
     x.setZero();
     // set a random ground truth
-	Eigen::VectorXf x_t = Eigen::VectorXf::Random(N);
+	Eigen::VectorXd x_t = Eigen::VectorXd::Random(N);
 	// generate target based on random x_t
-	Eigen::VectorXf b = L * x_t;
+	Eigen::VectorXd b = L * x_t;
     // An alternative way is to directly generate the b vector
-    // Eigen::VectorXf b = Eigen::VectorXf::Random(BLOCK_SIZE);
+    // Eigen::VectorXd b = Eigen::VectorXd::Random(N);
 
-    float b_mean = b.mean();
-    Eigen::VectorXf b_m = b - Eigen::VectorXf::Ones(b.size())*b_mean;
-    // std::cout << " b_m.norm() = " << b_m.norm() << std::endl;
-
+    double b_mean = b.mean();
+    Eigen::VectorXd b_m = b - Eigen::VectorXd::Ones(b.size())*b_mean;
+    std::cout << " b_m.norm() = " << b_m.norm() << std::endl;
+    // observe the precision of the mean.
+    std::cout << " b_m.mean() = " << b_m.mean() << std::endl;
+    // exit(1);
     // pre-conditioning: NOTE than since the diagonal elements of G can be zero,
     // it is not possible to invert it and do a triangular solve that is
     // generally possible with positive definite matrices.

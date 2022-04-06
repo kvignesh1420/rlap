@@ -11,7 +11,7 @@
 
 #define PTR_RESET -1
 
-OrderedPreconditioner::OrderedPreconditioner(Eigen::SparseMatrix<float>* A){
+OrderedPreconditioner::OrderedPreconditioner(Eigen::SparseMatrix<double>* A){
     _A = A;
     _ordmat = getOrderedMatrix();
 }
@@ -19,19 +19,20 @@ OrderedPreconditioner::OrderedPreconditioner(Eigen::SparseMatrix<float>* A){
 
 OrderedMatrix* OrderedPreconditioner::getOrderedMatrix(){
     int n = _A->rows();
-    std::vector<float> cols;
-    std::vector<OrderedElement*> llelems;
+    double m = _A->nonZeros();
+    std::vector<double> cols(n, 0.0);
+    std::vector<OrderedElement*> llelems(m, nullptr);
     int ptr = 0;
 
     for(int i = 0; i < n-1; i++){
-        float next = -1;
+        double next = -1;
         int start_idx = _A->outerIndexPtr()[i];
         int end_idx = _A->outerIndexPtr()[i+1];
         for(int ind = start_idx ; ind < end_idx; ind++){
             int j = _A->innerIndexPtr()[ind];
             if(i < j){
 
-                float v = _A->valuePtr()[ind];
+                double v = _A->valuePtr()[ind];
                 // v is value of the element at position (j,i) in _A.
                 // std::cout << "_A(" << j << "," << i << ") = " << v << std::endl;
                 OrderedElement* ord = new OrderedElement();
@@ -39,12 +40,12 @@ OrderedMatrix* OrderedPreconditioner::getOrderedMatrix(){
                 ord->next = next;
                 ord->val = v;
                 // llelems[ptr] = ord;
-                llelems.push_back(ord);
+                llelems.at(ptr) = ord;
                 next = ptr;
                 ptr += 1;
             }
         }
-        cols.push_back(next);
+        cols.at(i) = next;
     }
 
     OrderedMatrix* llmo = new OrderedMatrix();
@@ -54,10 +55,10 @@ OrderedMatrix* OrderedPreconditioner::getOrderedMatrix(){
     return llmo;
 }
 
-float OrderedPreconditioner::getColumnLength(OrderedMatrix* ordmat, int i, std::vector<ColumnElement>* colspace){
+double OrderedPreconditioner::getColumnLength(OrderedMatrix* ordmat, int i, std::vector<ColumnElement>* colspace){
     // TRACER("get col length for column %d \n", i);
-    float ptr = ordmat->cols[i];
-    float len = 0;
+    double ptr = ordmat->cols[i];
+    double len = 0;
     while(ptr != PTR_RESET){
         len += 1;
         ColumnElement item = ColumnElement();
@@ -80,7 +81,7 @@ float OrderedPreconditioner::getColumnLength(OrderedMatrix* ordmat, int i, std::
 }
 
 void OrderedPreconditioner::printColumn(OrderedMatrix* ordmat, int i){
-    float ptr = ordmat->cols[i];
+    double ptr = ordmat->cols[i];
     std::cout << "printing col " << i << std::endl;
     while(ptr != PTR_RESET){
         OrderedElement* oe = ordmat->elements[ptr];
@@ -110,16 +111,16 @@ void OrderedPreconditioner::printMatrixDetails(OrderedMatrix* ordmat){
     }
 }
 
-float OrderedPreconditioner::compressColumn(std::vector<ColumnElement>* colspace, float len){
+double OrderedPreconditioner::compressColumn(std::vector<ColumnElement>* colspace, double len){
     // TRACER("Compressing col of len = %f \n", len);
 
     std::sort(colspace->begin(), colspace->begin()+len,
          [](ColumnElement a, ColumnElement b) {return a.row < b.row; });
 
-    float ptr = PTR_RESET;
-    float currow = colspace->at(0).row;
-    float curptr = colspace->at(0).ptr;
-    float curval = colspace->at(0).val;
+    double ptr = PTR_RESET;
+    double currow = colspace->at(0).row;
+    double curptr = colspace->at(0).ptr;
+    double curval = colspace->at(0).val;
 
     for(int i = 1; i < len; i++){
         if(colspace->at(i).row != currow){
@@ -153,58 +154,58 @@ float OrderedPreconditioner::compressColumn(std::vector<ColumnElement>* colspace
 }
 
 LDLi* OrderedPreconditioner::getLDLi(){
-    float n = _ordmat->n;
+    double n = _ordmat->n;
     LDLi* ldli = new LDLi();
-    ldli->col = std::vector<float>();
-    ldli->colptr = std::vector<float>();
-    ldli->rowval = std::vector<float>();
-    ldli->fval = std::vector<float>();
-
-    float ldli_row_ptr = 0;
-    std::vector<float> d(n, 0.0);
-    std::vector<ColumnElement>* colspace = new std::vector<ColumnElement>();
+    ldli->col = std::vector<double>(n-1, 0.0);
+    ldli->colptr = std::vector<double>(n, 0.0);
+    ldli->rowval = std::vector<double>();
+    ldli->fval = std::vector<double>();
+    std::vector<double> d(n, 0.0);
+    double ldli_row_ptr = 0;
+    
+    std::vector<ColumnElement>* colspace = new std::vector<ColumnElement>;
     std::mt19937_64 rand_generator;
-    std::uniform_real_distribution<float> u_distribution(0, 1);
+    std::uniform_real_distribution<double> u_distribution(0, 1);
     for(int i = 0; i < n-1; i++){
         // std::cout << "====================== ComputeLDLi: column " << i << " ============================" << std::endl;
 
-        ldli->col.push_back(i);
-        ldli->colptr.push_back(ldli_row_ptr);
+        ldli->col.at(i) = i;
+        ldli->colptr.at(i) = ldli_row_ptr;
 
-        float len = getColumnLength(_ordmat, i, colspace);
+        double len = getColumnLength(_ordmat, i, colspace);
         // std::cout << "Length from column with multiedges = " << len << std::endl;
         len = compressColumn(colspace, len);
         // std::cout << "Length of column after compression = " << len << std::endl;
 
-        float csum = 0;
-        std::vector<float> cumspace;
+        double csum = 0;
+        std::vector<double> cumspace;
         for(int ii = 0; ii < len ; ii++){
             csum += colspace->at(ii).val;
             cumspace.push_back(csum);
         }
-        float wdeg = csum;
-        float colScale = 1;
+        double wdeg = csum;
+        double colScale = 1;
 
         for(int joffset = 0; joffset < len-1; joffset++){
             ColumnElement ce = colspace->at(joffset);
-            float w = ce.val*colScale;
-            float j = ce.row;
-            float f = float(w)/wdeg;
+            double w = ce.val*colScale;
+            double j = ce.row;
+            double f = double(w)/wdeg;
 
-            float u_r = u_distribution(rand_generator);
-            float r = u_r*(csum  - cumspace[joffset]) + cumspace[joffset];
-            float koff=len-1;
+            double u_r = u_distribution(rand_generator);
+            double r = u_r*(csum  - cumspace[joffset]) + cumspace[joffset];
+            double koff=len-1;
             for(int k_i = 0; k_i < len; k_i++){
                 if(cumspace[k_i]>r){
                     koff = k_i;
                     break;
                 }
             }
-            float k = colspace->at(koff).row;
+            double k = colspace->at(koff).row;
             // std::cout << "random value r = "<< r << " current row = " << j << " satisfied row = " << k << std::endl;
-            float newEdgeVal = w*(1-f);
+            double newEdgeVal = w*(1-f);
             if(j < k){
-                float jhead = _ordmat->cols[j];
+                double jhead = _ordmat->cols[j];
 
                 OrderedElement* ord = new OrderedElement();
                 ord->row = k;
@@ -214,7 +215,7 @@ LDLi* OrderedPreconditioner::getLDLi(){
 
                 _ordmat->cols[j] = ce.ptr;
             } else{
-                float khead = _ordmat->cols[k];
+                double khead = _ordmat->cols[k];
 
                 OrderedElement* ord = new OrderedElement();
                 ord->row = j;
@@ -235,8 +236,8 @@ LDLi* OrderedPreconditioner::getLDLi(){
 
         // TRACER("handling last element in column %d of len %f\n", i, len);
         ColumnElement ce = colspace->at(len-1);
-        float w = ce.val*colScale;
-        float j = ce.row;
+        double w = ce.val*colScale;
+        double j = ce.row;
         ldli->rowval.push_back(j);
         ldli->fval.push_back(1.0);
         ldli_row_ptr += 1;
@@ -244,7 +245,7 @@ LDLi* OrderedPreconditioner::getLDLi(){
         d[i] = w;
     }
 
-    ldli->colptr.push_back(ldli_row_ptr);
+    ldli->colptr.at(n-1) = ldli_row_ptr;
     ldli->d = d;
 
     return ldli;
@@ -252,31 +253,31 @@ LDLi* OrderedPreconditioner::getLDLi(){
 
 // PriorityPreconditioner
 
-PriorityPreconditioner::PriorityPreconditioner(Eigen::SparseMatrix<float>* A){
+PriorityPreconditioner::PriorityPreconditioner(Eigen::SparseMatrix<double>* A){
     _A = A;
     _pmat = getPriorityMatrix();
 }
 
-std::vector<float> PriorityPreconditioner::getFlipIndices(Eigen::SparseMatrix<float>* M){
-    Eigen::SparseMatrix<float> F = Eigen::SparseMatrix<float>(M->rows(), M->cols());
-    std::vector<Eigen::Triplet<float> > triplets;
+std::vector<double> PriorityPreconditioner::getFlipIndices(Eigen::SparseMatrix<double>* M){
+    Eigen::SparseMatrix<double> F = Eigen::SparseMatrix<double>(M->rows(), M->cols());
+    std::vector<Eigen::Triplet<double> > triplets;
 
     int n = M->rows();
-    float counter = 0;
+    double counter = 0;
     for(int coln = 0; coln < n; coln++){
         int start_idx = M->outerIndexPtr()[coln];
         int end_idx = M->outerIndexPtr()[coln+1];
         for(int ind = start_idx ; ind < end_idx; ind++){
             int rown  = M->innerIndexPtr()[ind];
-            triplets.push_back(Eigen::Triplet<float>(rown, coln, counter));
+            triplets.push_back(Eigen::Triplet<double>(rown, coln, counter));
             counter += 1;
         }
     }
     F.setFromTriplets(triplets.begin(), triplets.end());
     // std::cout << "F matrix = \n" << F << std::endl;
-    Eigen::SparseMatrix<float> F_t = F.transpose();
+    Eigen::SparseMatrix<double> F_t = F.transpose();
     // std::cout << "F_t matrix = \n" << F_t << std::endl;
-    std::vector<float> flipped_indices;
+    std::vector<double> flipped_indices;
     for(int coln = 0; coln < n; coln++){
         int start_idx = F_t.outerIndexPtr()[coln];
         int end_idx = F_t.outerIndexPtr()[coln+1];
@@ -287,10 +288,10 @@ std::vector<float> PriorityPreconditioner::getFlipIndices(Eigen::SparseMatrix<fl
     return flipped_indices;
 }
 
-void PriorityPreconditioner::printFlipIndices(std::vector<float> fi){
+void PriorityPreconditioner::printFlipIndices(std::vector<double> fi){
     std::cout << "flip indices = " << std::endl;
     for(int i = 0; i < fi.size(); i++){
-        float val = fi.at(i);
+        double val = fi.at(i);
         if(i != fi.at(val)){
             std::cout << "flip index mismatch: " << i << " " << val << std::endl;
         }
@@ -306,17 +307,17 @@ PriorityMatrix* PriorityPreconditioner::getPriorityMatrix(){
     int n = _A->rows();
     std::vector<PriorityElement*> cols;
     std::vector<PriorityElement*> llelems;
-    std::vector<float> degs;
+    std::vector<double> degs;
 
     // std::cout << "flipping " << std::endl;
-    std::vector<float> flips = getFlipIndices(_A);
+    std::vector<double> flips = getFlipIndices(_A);
     // printFlipIndices(flips);
     // std::cout << "flipped " << std::endl;
 
     for(int i = 0; i < n; i++){
         int start_idx = _A->outerIndexPtr()[i];
         int end_idx = _A->outerIndexPtr()[i+1];
-        float deg = end_idx - start_idx;
+        double deg = end_idx - start_idx;
         degs.push_back(deg);
         if(deg == 0){
             // std::cout << " deg[" << i << "] = " <<  end_idx - start_idx << std::endl;
@@ -326,8 +327,8 @@ PriorityMatrix* PriorityPreconditioner::getPriorityMatrix(){
         }
         // std::cout << " deg[" << i << "] = " <<  end_idx - start_idx << std::endl;
 
-        float j = _A->innerIndexPtr()[start_idx];
-        float v = _A->valuePtr()[start_idx];
+        double j = _A->innerIndexPtr()[start_idx];
+        double v = _A->valuePtr()[start_idx];
         PriorityElement* pe = new PriorityElement(j, v);
         llelems.push_back(pe);
         PriorityElement* next = pe;
@@ -368,22 +369,22 @@ void PriorityPreconditioner::printColumn(PriorityMatrix* pmat, int i){
     }
 }
 
-DegreePQ* PriorityPreconditioner::getDegreePQ(std::vector<float> degs){
+DegreePQ* PriorityPreconditioner::getDegreePQ(std::vector<double> degs){
     // std::cout << "get the PQ" << std::endl;
-    float n = degs.size();
+    double n = degs.size();
     std::vector<DegreePQElement*> elems;
     for(int i = 0; i < n; i++){
         elems.push_back(nullptr);
     }
-    std::vector<float> lists;
+    std::vector<double> lists;
     for(int i = 0; i < 2*n + 1; i++){
         lists.push_back(-1);
     }
-    float minlist = 0;
+    double minlist = 0;
 
     for(int i = 0; i < n; i++){
-        float key = degs.at(i);
-        float head = lists.at(key);
+        double key = degs.at(i);
+        double head = lists.at(key);
 
         if(head >= 0){
             DegreePQElement* elem_i = new DegreePQElement();
@@ -418,7 +419,7 @@ DegreePQ* PriorityPreconditioner::getDegreePQ(std::vector<float> degs){
     return pq;
 }
 
-float PriorityPreconditioner::DegreePQPop(DegreePQ* pq){
+double PriorityPreconditioner::DegreePQPop(DegreePQ* pq){
     // std::cout << "popping the element" << std::endl;
     if(pq->nitems == 0){
         throw std::invalid_argument("the PQ is empty. Cannot pop an element");
@@ -429,9 +430,9 @@ float PriorityPreconditioner::DegreePQPop(DegreePQ* pq){
     }
     // std::cout << " minlist after pop = " << pq->minlist << std::endl;
     // pq->minlist now represents the min degree of the nodes in the graph
-    float i = pq->lists.at(pq->minlist);
+    double i = pq->lists.at(pq->minlist);
     // i is the node with min degree and will be popped
-    float next = pq->elems.at(i)->next;
+    double next = pq->elems.at(i)->next;
     // std::cout << " next of the popped element = " << next << std::endl;
     // update the index of the node with min-degree in pq->lists
     pq->lists.at(pq->minlist) = next;
@@ -450,11 +451,11 @@ float PriorityPreconditioner::DegreePQPop(DegreePQ* pq){
     return i;
 }
 
-void PriorityPreconditioner::DegreePQMove(DegreePQ* pq, int i, float newkey, int oldlist, int newlist){
+void PriorityPreconditioner::DegreePQMove(DegreePQ* pq, int i, double newkey, int oldlist, int newlist){
     // std::cout << "move in the PQ" << std::endl;
     // std::cout << "  i = " << i << " newkey = " << newkey << " oldlist = " << oldlist << " newlist = " << newlist << std::endl;
-    float prev = pq->elems.at(i)->prev;
-    float next = pq->elems.at(i)->next;
+    double prev = pq->elems.at(i)->prev;
+    double next = pq->elems.at(i)->next;
     // std::cout << "prev = " << prev << " next = " << next << std::endl;
     // remove i from the oldlist
     if(next > -1){
@@ -475,7 +476,7 @@ void PriorityPreconditioner::DegreePQMove(DegreePQ* pq, int i, float newkey, int
     }
 
     // std::cout<< "insert " << i << " into newlist" << std::endl;
-    float head = pq->lists.at(newlist);
+    double head = pq->lists.at(newlist);
     // std::cout << " head = " << head << std::endl;
     if(head > -1){
         DegreePQElement* elem_head = new DegreePQElement();
@@ -497,8 +498,8 @@ void PriorityPreconditioner::DegreePQMove(DegreePQ* pq, int i, float newkey, int
 
 void PriorityPreconditioner::DegreePQDec(DegreePQ* pq, int i){
     // std::cout << "dec in the PQ " << i << std::endl;
-    float n = pq->n;
-    float deg_i = pq->elems.at(i)->key;
+    double n = pq->n;
+    double deg_i = pq->elems.at(i)->key;
     if(deg_i == 1){
         return;
     }
@@ -523,8 +524,8 @@ void PriorityPreconditioner::DegreePQDec(DegreePQ* pq, int i){
 
 void PriorityPreconditioner::DegreePQInc(DegreePQ* pq, int i){
     // std::cout << "inc in the PQ" << std::endl;
-    float n = pq->n;
-    float deg_i = pq->elems.at(i)->key;
+    double n = pq->n;
+    double deg_i = pq->elems.at(i)->key;
     int oldlist = deg_i <= n ? deg_i : n + int(deg_i/n);
     int newlist = deg_i+1 <= n ? deg_i+1 : n + int((deg_i+1)/n);
     // std::cout << " deg_i = " << deg_i << std::endl;
@@ -541,10 +542,10 @@ void PriorityPreconditioner::DegreePQInc(DegreePQ* pq, int i){
     return;
 }
 
-float PriorityPreconditioner::getColumnLength(PriorityMatrix* pmat, int i, std::vector<PriorityElement*>* colspace){
+double PriorityPreconditioner::getColumnLength(PriorityMatrix* pmat, int i, std::vector<PriorityElement*>* colspace){
     // std::cout << "get col length " << i << std::endl;
     PriorityElement* ll = pmat->cols[i];
-    float len = 0;
+    double len = 0;
     while(ll->next != ll){
         // std::cout << "loop in gcl" << std::endl;
         if(ll->val > 0){
@@ -569,14 +570,14 @@ float PriorityPreconditioner::getColumnLength(PriorityMatrix* pmat, int i, std::
     return len;
 }
 
-float PriorityPreconditioner::compressColumn(PriorityMatrix* a, std::vector<PriorityElement*>* colspace, float len, DegreePQ* pq){
+double PriorityPreconditioner::compressColumn(PriorityMatrix* a, std::vector<PriorityElement*>* colspace, double len, DegreePQ* pq){
     // std::cout << "Compressing col of len = " << len << std::endl;
 
     std::sort(colspace->begin(), colspace->begin()+len,
          [](PriorityElement* a, PriorityElement* b) {return a->row < b->row; });
 
-    float ptr = PTR_RESET;
-    float currow = -1;
+    double ptr = PTR_RESET;
+    double currow = -1;
 
     for(int i = 0; i < len; i++){
         if(colspace->at(i)->row != currow){
@@ -604,66 +605,66 @@ float PriorityPreconditioner::compressColumn(PriorityMatrix* a, std::vector<Prio
 
 LDLi* PriorityPreconditioner::getLDLi(){
     PriorityMatrix* a = _pmat;
-    float n = a->n;
+    double n = a->n;
     LDLi* ldli = new LDLi();
-    ldli->col = std::vector<float>();
-    ldli->colptr = std::vector<float>();
-    ldli->rowval = std::vector<float>();
-    ldli->fval = std::vector<float>();
+    ldli->col = std::vector<double>();
+    ldli->colptr = std::vector<double>();
+    ldli->rowval = std::vector<double>();
+    ldli->fval = std::vector<double>();
 
-    float ldli_row_ptr = 0;
-    std::vector<float> d(n, 0.0);
+    double ldli_row_ptr = 0;
+    std::vector<double> d(n, 0.0);
 
     DegreePQ* pq = getDegreePQ(a->degs);
 
-    float it = 1;
+    double it = 1;
     std::vector<PriorityElement*>* colspace = new std::vector<PriorityElement*>();
     std::mt19937_64 rand_generator;
-    std::uniform_real_distribution<float> u_distribution(0, 1);
+    std::uniform_real_distribution<double> u_distribution(0, 1);
     while(it < n){
         // std::cout << "looop " << it << std::endl;
-        float i = DegreePQPop(pq);
+        double i = DegreePQPop(pq);
 
         ldli->col.push_back(i);
         ldli->colptr.push_back(ldli_row_ptr);
 
         it += 1;
 
-        float len = getColumnLength(a, i, colspace);
+        double len = getColumnLength(a, i, colspace);
         len = compressColumn(a, colspace, len, pq);
-        float csum = 0;
-        std::vector<float> cumspace;
-        std::vector<float> vals;
+        double csum = 0;
+        std::vector<double> cumspace;
+        std::vector<double> vals;
         for(int ii = 0; ii < len ; ii++){
             vals.push_back(colspace->at(ii)->val);
             csum += colspace->at(ii)->val;
             cumspace.push_back(csum);
         }
-        float wdeg = csum;
-        float colScale = 1;
+        double wdeg = csum;
+        double colScale = 1;
 
         for(int joffset = 0; joffset < len-1; joffset++){
             PriorityElement* ll = colspace->at(joffset);
-            float w = vals.at(joffset) * colScale;
-            float j = ll->row;
+            double w = vals.at(joffset) * colScale;
+            double j = ll->row;
             PriorityElement* revj = ll->reverse;
-            float f = float(w)/wdeg;
+            double f = double(w)/wdeg;
             vals.at(joffset) = 0;
 
-            float u_r = u_distribution(rand_generator);
-            float r = u_r*(csum  - cumspace[joffset]) + cumspace[joffset];
-            float koff = len-1;
+            double u_r = u_distribution(rand_generator);
+            double r = u_r*(csum  - cumspace[joffset]) + cumspace[joffset];
+            double koff = len-1;
             for(int k_i = 0; k_i < len; k_i++){
                 if(cumspace[k_i]>r){
                     koff = k_i;
                     break;
                 }
             }
-            float k = colspace->at(koff)->row;
+            double k = colspace->at(koff)->row;
 
             DegreePQInc(pq, k);
 
-            float newEdgeVal = f*(1-f)*wdeg;
+            double newEdgeVal = f*(1-f)*wdeg;
 
             // row k in col j
             revj->row = k;
@@ -689,8 +690,8 @@ LDLi* PriorityPreconditioner::getLDLi(){
         if(len > 0){
             // std::cout << "len = " << len << "vals len = " << vals.size() << " colspace len = " << colspace->size() << std::endl;
             PriorityElement* ll = colspace->at(len-1);
-            float w = vals.at(len-1)*colScale;
-            float j = ll->row;
+            double w = vals.at(len-1)*colScale;
+            double j = ll->row;
             PriorityElement* revj = ll->reverse;
             if(it < n){
                 DegreePQDec(pq, j);
