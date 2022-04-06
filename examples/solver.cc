@@ -7,26 +7,16 @@
 #include "rlap/cc/types.h"
 #include "rlap/cc/preconditioner.h"
 
-#define BLOCK_SIZE 1000000
-
 Eigen::SparseMatrix<float>* getAdjacencyMatrix(std::string filepath, int nrows, int ncols){
     Reader* r = new TSVReader(filepath, nrows, ncols);
     Eigen::SparseMatrix<float>* A = r->Read();
-    // sub-matrix matrix for faster tests
-    int block_nrows = BLOCK_SIZE;
-    int block_ncols = BLOCK_SIZE;
-    int start_row = 0;
-    int start_col = 0;
-    Eigen::SparseMatrix<float>* A_block = new Eigen::SparseMatrix<float>(
-        A->block(start_row, start_col, block_nrows, block_ncols)
-    );
-    return A_block;
+    return A;
 }
 
 int main(){
 
-    int N = 1000000;
-    std::string filepath = "data/grid100.tsv";
+    int N = 125000;
+    std::string filepath = "data/grid50.tsv";
 
     Eigen::SparseMatrix<float>* A = getAdjacencyMatrix(filepath, N, N);
     std::cout << "nnz(A) = " << A->nonZeros() << std::endl;
@@ -39,10 +29,10 @@ int main(){
     Eigen::SparseMatrix<float> L = fact.getLaplacian();
     LDLi* ldli = fact.getPreconditioner();
 
-    Eigen::VectorXf x(BLOCK_SIZE);
+    Eigen::VectorXf x(N);
     x.setZero();
     // set a random ground truth
-	Eigen::VectorXf x_t = Eigen::VectorXf::Random(BLOCK_SIZE);
+	Eigen::VectorXf x_t = Eigen::VectorXf::Random(N);
 	// generate target based on random x_t
 	Eigen::VectorXf b = L * x_t;
     // An alternative way is to directly generate the b vector
