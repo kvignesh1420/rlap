@@ -162,7 +162,6 @@ LDLi* OrderedPreconditioner::getLDLi(){
 
     float ldli_row_ptr = 0;
     std::vector<float> d(n, 0.0);
-    float joffsets = 0;
     std::vector<ColumnElement>* colspace = new std::vector<ColumnElement>();
     std::mt19937_64 rand_generator;
     std::uniform_real_distribution<float> u_distribution(0, 1);
@@ -175,7 +174,6 @@ LDLi* OrderedPreconditioner::getLDLi(){
         float len = getColumnLength(_ordmat, i, colspace);
         // std::cout << "Length from column with multiedges = " << len << std::endl;
         len = compressColumn(colspace, len);
-        joffsets += len;
         // std::cout << "Length of column after compression = " << len << std::endl;
 
         float csum = 0;
@@ -195,7 +193,7 @@ LDLi* OrderedPreconditioner::getLDLi(){
 
             float u_r = u_distribution(rand_generator);
             float r = u_r*(csum  - cumspace[joffset]) + cumspace[joffset];
-            float koff=0;
+            float koff=len-1;
             for(int k_i = 0; k_i < len; k_i++){
                 if(cumspace[k_i]>r){
                     koff = k_i;
@@ -248,7 +246,6 @@ LDLi* OrderedPreconditioner::getLDLi(){
 
     ldli->colptr.push_back(ldli_row_ptr);
     ldli->d = d;
-    // std::cout << " J OFFSETS = " << joffsets << std::endl;
 
     return ldli;
 }
@@ -655,7 +652,7 @@ LDLi* PriorityPreconditioner::getLDLi(){
 
             float u_r = u_distribution(rand_generator);
             float r = u_r*(csum  - cumspace[joffset]) + cumspace[joffset];
-            float koff = 0;
+            float koff = len-1;
             for(int k_i = 0; k_i < len; k_i++){
                 if(cumspace[k_i]>r){
                     koff = k_i;
@@ -709,6 +706,5 @@ LDLi* PriorityPreconditioner::getLDLi(){
     }
     ldli->colptr.push_back(ldli_row_ptr);
     ldli->d = d;
-    // std::cout << " J OFFSETS = " << joffsets << std::endl;
     return ldli;
 }
