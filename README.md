@@ -30,8 +30,8 @@ A laplacian system of equations can be solved using `rlap` as follows:
 
 int main(){
     // read the tsv adjacency matrix
-    int N = 125000; // number of rows/cols
-    std::string filepath = "data/grid50.tsv";
+    int N = 1000000; // number of rows/cols
+    std::string filepath = "data/grid100.tsv";
     Reader* r = new TSVReader(filepath, N, N);
     Eigen::SparseMatrix<float>* A = r->Read();
 

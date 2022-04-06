@@ -165,17 +165,20 @@ Eigen::MatrixXf NaiveApproximateCholesky::getReconstructedLaplacian(){
 ApproximateCholesky::ApproximateCholesky(Eigen::SparseMatrix<float>* Adj){
     _A = Adj;
     _L = this->computeLaplacian(_A);
+    this->compute();
 }
 
 ApproximateCholesky::ApproximateCholesky(Eigen::SparseMatrix<float> Adj){
     _A = &Adj;
     _L = this->computeLaplacian(_A);
+    this->compute();
 }
 
 ApproximateCholesky::ApproximateCholesky(std::string filename, int nrows, int ncols){
     Reader* r = new TSVReader(filename, nrows, ncols);
     _A = r->Read();
     _L = this->computeLaplacian(_A);
+    this->compute();
 }
 
 Eigen::SparseMatrix<float> ApproximateCholesky::getAdjacencyMatrix(){
@@ -183,7 +186,6 @@ Eigen::SparseMatrix<float> ApproximateCholesky::getAdjacencyMatrix(){
 }
 
 Eigen::VectorXf ApproximateCholesky::solve(Eigen::VectorXf b){
-    this->compute();
     PConjugateGradient pcg = PConjugateGradient(_L, &b);
     pcg.setPreconditioner(_ldli);
     Eigen::VectorXf x = pcg.solve(1e-12);

@@ -31,7 +31,8 @@ int main(){
     Eigen::SparseMatrix<float>* A = getAdjacencyMatrix(filepath, N, N);
     std::cout << "nnz(A) = " << A->nonZeros() << std::endl;
     ApproximateCholesky fact = ApproximateCholesky(A);
-    fact.compute();
+
+    // retrieve the computed laplacian
     Eigen::SparseMatrix<float> L = fact.getLaplacian();
     LDLi* ldli = fact.getPreconditioner();
 
