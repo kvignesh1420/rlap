@@ -15,7 +15,7 @@ class OrderedPreconditioner : public Preconditioner{
   public:
     OrderedPreconditioner(Eigen::SparseMatrix<double>* A);
     ~OrderedPreconditioner(){};
-    LDLi* getLDLi();
+    LDLi* getLDLi() override;
   private:
     OrderedMatrix* getOrderedMatrix();
     double getColumnLength(OrderedMatrix* ordmat, int i, std::vector<ColumnElement>* colspace);
@@ -31,7 +31,7 @@ class PriorityPreconditioner : public Preconditioner{
   public:
     PriorityPreconditioner(Eigen::SparseMatrix<double>* A);
     ~PriorityPreconditioner(){};
-    LDLi* getLDLi();
+    LDLi* getLDLi() override;
   private:
     PriorityMatrix* getPriorityMatrix();
     void printColumn(PriorityMatrix* pmat, int i);
