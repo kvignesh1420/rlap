@@ -32,7 +32,8 @@ class PriorityPreconditioner : public Preconditioner{
     PriorityPreconditioner(Eigen::SparseMatrix<double>* A);
     ~PriorityPreconditioner(){};
     LDLi* getLDLi() override;
-  private:
+
+  protected:
     PriorityMatrix* getPriorityMatrix();
     void printColumn(PriorityMatrix* pmat, int i);
     DegreePQ* getDegreePQ(std::vector<double> a);
@@ -45,6 +46,17 @@ class PriorityPreconditioner : public Preconditioner{
     double compressColumn(PriorityMatrix* pmat, std::vector<PriorityElement*>* colspace, double len, DegreePQ* pq);
     void printFlipIndices(std::vector<double> fi);
 
+  private:
+    Eigen::SparseMatrix<double>* _A;
+    PriorityMatrix* _pmat;
+};
+
+class CoarseningPreconditioner : public PriorityPreconditioner{
+  public:
+    CoarseningPreconditioner(Eigen::SparseMatrix<double>* A);
+    ~CoarseningPreconditioner(){};
+    LDLi* getLDLi() override;
+  private:
     Eigen::SparseMatrix<double>* _A;
     PriorityMatrix* _pmat;
 };

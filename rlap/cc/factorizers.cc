@@ -202,12 +202,17 @@ void ApproximateCholesky::compute(){
         TRACER("using OrderedPreconditioner\n");
         prec = new OrderedPreconditioner(_A);
     }
+    else if(_pre_str == "coarsen"){
+        TRACER("using CoarseningPreconditioner\n");
+        prec = new CoarseningPreconditioner(_A);
+    }
     else{
         // default option
         TRACER("using PriorityPreconditioner\n");
         prec = new PriorityPreconditioner(_A);
     }
     _ldli = prec->getLDLi();
+    std::cout << "ratio of preconditioned egdes to original edges = " << 2*float(_ldli->fval.size())/_A->nonZeros() << std::endl;
 }
 
 LDLi* ApproximateCholesky::getPreconditioner(){
