@@ -192,7 +192,7 @@ Eigen::SparseMatrix<double> ApproximateCholesky::getAdjacencyMatrix(){
 Eigen::VectorXd ApproximateCholesky::solve(Eigen::VectorXd b){
     PConjugateGradient pcg = PConjugateGradient(_L, &b);
     pcg.setPreconditioner(_ldli);
-    Eigen::VectorXd x = pcg.solve(1e-12);
+    Eigen::VectorXd x = pcg.solve(1e-12, 5000);
     _num_iters = pcg.getNumIters();
     return x;
 }
