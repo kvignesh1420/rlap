@@ -193,6 +193,7 @@ Eigen::VectorXd ApproximateCholesky::solve(Eigen::VectorXd b){
     PConjugateGradient pcg = PConjugateGradient(_L, &b);
     pcg.setPreconditioner(_ldli);
     Eigen::VectorXd x = pcg.solve(1e-12);
+    _num_iters = pcg.getNumIters();
     return x;
 }
 
@@ -213,6 +214,14 @@ void ApproximateCholesky::compute(){
     }
     _ldli = prec->getLDLi();
     std::cout << "ratio of preconditioned egdes to original edges = " << 2*float(_ldli->fval.size())/_A->nonZeros() << std::endl;
+}
+
+int ApproximateCholesky::getNumIters(){
+    return _num_iters;
+}
+
+double ApproximateCholesky::getSparsityRatio(){
+    return 2*float(_ldli->fval.size())/_A->nonZeros();
 }
 
 LDLi* ApproximateCholesky::getPreconditioner(){

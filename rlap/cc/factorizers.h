@@ -121,11 +121,16 @@ class ApproximateCholesky: public Factorizer{
     LDLi* getPreconditioner();
     // solve for the unknowns
     Eigen::VectorXd solve(Eigen::VectorXd b);
+    // return the number of iters of the underlying pcg solver
+    int getNumIters();
+    // return the ratio of edges in preconditioned/original matrix.
+    double getSparsityRatio();
   private:
     Eigen::SparseMatrix<double>* _A;
     Eigen::SparseMatrix<double>* _L;
     LDLi* _ldli;
     std::string _pre_str;
+    int _num_iters = 0;
 };
 
 

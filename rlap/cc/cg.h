@@ -24,10 +24,12 @@ class PConjugateGradient{
     Eigen::VectorXd solve(double tolerance, int max_iters=1000);
     void setPreconditioner(LDLi* ldli);
     Eigen::VectorXd applyPreconditioner(Eigen::VectorXd b);
+    int getNumIters();
   private:
     Eigen::SparseMatrix<double> _M;
     Eigen::VectorXd _b;
     LDLi* _ldli;
+    int _num_iters = 0;
 };
 
 #endif

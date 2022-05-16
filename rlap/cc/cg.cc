@@ -49,6 +49,7 @@ Eigen::VectorXd ConjugateGradient::solve(double tolerance, int max_iters){
 PConjugateGradient::PConjugateGradient(Eigen::SparseMatrix<double>* M, Eigen::VectorXd* b){
     _M = *M;
     _b = *b;
+    _num_iters = 0;
 }
 
 Eigen::VectorXd PConjugateGradient::solve(double tolerance, int max_iters){
@@ -75,10 +76,10 @@ Eigen::VectorXd PConjugateGradient::solve(double tolerance, int max_iters){
     double best_rho = rho;
     double stag_count = 0;
 
-    int iter_count = 0;
-    while(iter_count < max_iters){
-        iter_count += 1;
-        // std::cout << "CG ITER COUNT = " << iter_count << std::endl;
+    _num_iters = 0;
+    while(_num_iters < max_iters){
+        _num_iters += 1;
+        // std::cout << "CG ITER COUNT = " << _num_iters << std::endl;
         Eigen::VectorXd q = _M * p;
         double pq = p.dot(q);
         if(pq <= 1e-16 || std::isinf(pq)){
@@ -138,11 +139,15 @@ Eigen::VectorXd PConjugateGradient::solve(double tolerance, int max_iters){
         p = z + beta*p;
         // std::cout<< " oldrho = " << oldrho << " rho = " << rho << " beta= " << beta << std::endl;
     }
-    std::cout << "CG stopped after Iteration count = " << iter_count << " with error = " << r.norm()/nb << std::endl;
+    std::cout << "CG stopped after Iteration count = " << _num_iters << " with error = " << r.norm()/nb << std::endl;
     auto end_time = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
     std::cout << "elapsed time: " << elapsed_seconds.count() << "s\n";
     return best_x;
+}
+
+int PConjugateGradient::getNumIters(){
+    return _num_iters;
 }
 
 void PConjugateGradient::setPreconditioner(LDLi* ldli){

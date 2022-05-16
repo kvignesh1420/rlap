@@ -15,8 +15,8 @@ Eigen::SparseMatrix<double>* getAdjacencyMatrix(std::string filepath, int nrows,
 
 int main(){
 
-    int N = 1000000;
-    std::string filepath = "data/grid100.tsv";
+    int N = 125000;
+    std::string filepath = "data/grid50.tsv";
 
     Eigen::SparseMatrix<double>* A = getAdjacencyMatrix(filepath, N, N);
     std::cout << "nnz(A) = " << A->nonZeros() << std::endl;
