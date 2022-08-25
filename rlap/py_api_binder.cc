@@ -13,7 +13,10 @@ PYBIND11_MODULE(_librlap, m){
     // runtime cost as a __dict__ is now added to this python class, and the garbage
     // collection becomes a bit expensive.
     py::class_<ApproximateCholesky, Factorizer>(m, "ApproximateCholesky", py::dynamic_attr())
-        .def(py::init<std::string, int, int, std::string>(), py::arg("filename"), py::arg("nrows"), py::arg("ncols"), py::arg("pre"))
+        // .def(py::init<std::string, int, int, std::string>(), py::arg("filename"), py::arg("nrows"), py::arg("ncols"), py::arg("pre"))
+        .def(py::init<>())
+        .def("setup", &ApproximateCholesky::setup, py::arg("edge_info"), py::arg("nrows"), py::arg("ncols"), py::arg("pre"),
+            "setup the edge_info matrix and precondition the laplacian")
         .def("get_laplacian", &ApproximateCholesky::getLaplacian,
             "get the computed Laplacian")
         .def("solve", &ApproximateCholesky::solve, py::arg("b"),
@@ -23,6 +26,8 @@ PYBIND11_MODULE(_librlap, m){
             "return the number of iteration by pcg solver.")
         .def("get_sparsity_ratio", &ApproximateCholesky::getSparsityRatio,
             "return the ratio of number of preconditioned egdes to original edges.")
+        .def("get_schur_complement", &ApproximateCholesky::getSchurComplement, py::arg("t"),
+            "retrieve the schur complement after eliminating 't' vertices")
         .def("__repr__", 
             [](const ApproximateCholesky& a){ return "ApproximateCholesky()";}
         );

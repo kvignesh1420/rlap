@@ -206,6 +206,10 @@ cc/solver
 # helpers
 concepts/
 data/*.tsv
+data/SNAP
+data/Planetoid
+data/ogb*
+data/CORA
 
 # third-party
 eigen-3.4.0/

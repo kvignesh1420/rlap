@@ -28,7 +28,7 @@ Eigen::SparseMatrix<double>* Factorizer::computeLaplacian(Eigen::SparseMatrix<do
     }
     D->makeCompressed();
     *L = *D - *Adj;
-    std::cout << "Laplacian outer size:" << L->outerSize() << std::endl;
+    // std::cout << "Laplacian outer size:" << L->outerSize() << std::endl;
     // check symmetry of the laplacian
     Eigen::SparseMatrix<double> L_t = L->transpose();
     if((*L - L_t ).norm() != 0){
@@ -163,6 +163,30 @@ Eigen::MatrixXd NaiveApproximateCholesky::getReconstructedLaplacian(){
 
 // ApproximateCholesky
 
+ApproximateCholesky::ApproximateCholesky(){}
+
+void ApproximateCholesky::setup(Eigen::MatrixXd edge_info, int nrows, int ncols, std::string pre){
+    Reader* r = new EdgeInfoMatrixReader(edge_info, nrows, ncols);
+    _A = r->Read();
+    _L = this->computeLaplacian(_A);
+    _pre_str = pre;
+    Preconditioner* prec;
+    if(_pre_str == "order"){
+        // TRACER("using OrderedPreconditioner\n");
+        prec = new OrderedPreconditioner(_A);
+    }
+    else if(_pre_str == "coarsen"){
+        // TRACER("using CoarseningPreconditioner\n");
+        prec = new CoarseningPreconditioner(_A);
+    }
+    else{
+        // default option
+        // TRACER("using PriorityPreconditioner\n");
+        prec = new PriorityPreconditioner(_A);
+    }
+    _prec = prec;
+}
+
 ApproximateCholesky::ApproximateCholesky(Eigen::SparseMatrix<double>* Adj, std::string pre){
     _A = Adj;
     _L = this->computeLaplacian(_A);
@@ -212,7 +236,8 @@ void ApproximateCholesky::compute(){
         TRACER("using PriorityPreconditioner\n");
         prec = new PriorityPreconditioner(_A);
     }
-    _ldli = prec->getLDLi();
+    _prec = prec;
+    _ldli = _prec->getLDLi();
     std::cout << "ratio of preconditioned egdes to original edges = " << 2*float(_ldli->fval.size())/_A->nonZeros() << std::endl;
 }
 
@@ -226,6 +251,10 @@ double ApproximateCholesky::getSparsityRatio(){
 
 LDLi* ApproximateCholesky::getPreconditioner(){
     return _ldli;
+}
+
+Eigen::MatrixXd ApproximateCholesky::getSchurComplement(int t){
+    return _prec->getSchurComplement(t);
 }
 
 Eigen::SparseMatrix<double> ApproximateCholesky::getLaplacian(){

@@ -251,6 +251,13 @@ LDLi* OrderedPreconditioner::getLDLi(){
     return ldli;
 }
 
+
+Eigen::MatrixXd OrderedPreconditioner::getSchurComplement(int t){
+    Eigen::MatrixXd edge_info;
+    return edge_info;
+}
+
+
 // PriorityPreconditioner
 
 PriorityPreconditioner::PriorityPreconditioner(Eigen::SparseMatrix<double>* A){
@@ -717,6 +724,133 @@ LDLi* PriorityPreconditioner::getLDLi(){
     return ldli;
 }
 
+
+Eigen::MatrixXd PriorityPreconditioner::getSchurComplement(int t){
+    PriorityMatrix* a = _pmat;
+    double n = a->n;
+    LDLi* ldli = new LDLi();
+    ldli->col = std::vector<double>();
+    ldli->colptr = std::vector<double>();
+    ldli->rowval = std::vector<double>();
+    ldli->fval = std::vector<double>();
+
+    std::vector<double> d(n, 0.0);
+
+    DegreePQ* pq = getDegreePQ(a->degs);
+
+    double it = 1;
+    std::vector<PriorityElement*>* colspace = new std::vector<PriorityElement*>();
+    std::mt19937_64 rand_generator;
+    std::uniform_real_distribution<double> u_distribution(0, 1);
+    while(it <= t && it < n){
+        // std::cout << "looop " << it << std::endl;
+        double i = DegreePQPop(pq);
+        // std::cout << "Eliminated node " << i << std::endl;
+
+        it += 1;
+
+        double len = getColumnLength(a, i, colspace);
+        len = compressColumn(a, colspace, len, pq);
+        double csum = 0;
+        std::vector<double> cumspace;
+        std::vector<double> vals;
+        for(int ii = 0; ii < len ; ii++){
+            vals.push_back(colspace->at(ii)->val);
+            csum += colspace->at(ii)->val;
+            cumspace.push_back(csum);
+        }
+        double wdeg = csum;
+        double colScale = 1;
+
+        for(int joffset = 0; joffset < len-1; joffset++){
+            PriorityElement* ll = colspace->at(joffset);
+            double w = vals.at(joffset) * colScale;
+            double j = ll->row;
+            PriorityElement* revj = ll->reverse;
+            double f = double(w)/wdeg;
+            vals.at(joffset) = 0;
+
+            double u_r = u_distribution(rand_generator);
+            double r = u_r*(csum  - cumspace[joffset]) + cumspace[joffset];
+            double koff = len-1;
+            for(int k_i = 0; k_i < len; k_i++){
+                if(cumspace[k_i]>r){
+                    koff = k_i;
+                    break;
+                }
+            }
+            double k = colspace->at(koff)->row;
+
+            // A new edge is being added from node j to node k.
+            // However, since the edge node i to node j is being removed
+            // the degree of node j is not incremented.
+            DegreePQInc(pq, k);
+
+            double newEdgeVal = f*(1-f)*wdeg;
+
+            // row k in col j
+            revj->row = k;
+            revj->val = newEdgeVal;
+            revj->reverse = ll;
+
+            // row j in col k
+            PriorityElement* khead = a->cols.at(k);
+            a->cols.at(k) = ll;
+            ll->next = khead;
+            ll->reverse = revj;
+            ll->val = newEdgeVal;
+            ll->row = j;
+
+            colScale = colScale*(1-f);
+            wdeg = wdeg*(1-f)*(1-f);
+        }
+
+        if(len > 0){
+            // std::cout << "len = " << len << "vals len = " << vals.size() << " colspace len = " << colspace->size() << std::endl;
+            PriorityElement* ll = colspace->at(len-1);
+            double j = ll->row;
+            PriorityElement* revj = ll->reverse;
+            if(it < n){
+                // This indicates that the edge from node i to node j
+                // has been removed
+                DegreePQDec(pq, j);
+            }
+            ll->val = 0;
+            revj->val = 0;
+
+        }
+    }
+
+    std::vector<Eigen::Vector3d> edge_info_vector;
+    Eigen::MatrixXd edge_info;
+
+    int count = 0;
+    int edge_info_counter = 0;
+    while (count < n-t){
+        double i = DegreePQPop(pq);
+        double len = getColumnLength(a, i, colspace);
+        // std::cout << "Column: " << i << " length: " << len << std::endl;
+        len = compressColumn(a, colspace, len, pq);
+        // std::cout << "Column: " << i << " compressed length: " << len << std::endl;
+        for(int ii = 0; ii < len ; ii++){
+            double val = colspace->at(ii)->val;
+            double row = colspace->at(ii)->row;
+            Eigen::Vector3d temp(row, i, val);
+            edge_info_vector.push_back(temp);
+            // edge_info.row(edge_info_counter) << row, i, val;
+            edge_info_counter += 1;
+        }
+        count += 1;
+    }
+    edge_info.resize(edge_info_counter, 3);
+    for(int z = 0; z < edge_info_counter; z++){
+        // std::cout << "ROW: " << edge_info_vector[z] << std::endl;
+        edge_info.row(z) = edge_info_vector[z];
+    }
+
+    return edge_info;
+}
+
 // CoarseningPreconditioner
 
 CoarseningPreconditioner::CoarseningPreconditioner(Eigen::SparseMatrix<double>* A):
@@ -785,7 +919,7 @@ LDLi* CoarseningPreconditioner::getLDLi(){
         k_pe->val = 0;
         k_pe->reverse->val = 0;
         DegreePQDec(pq, k);
-        // remove edges from node i to it's neighbours and 
+        // remove edges from node i to it's neighbours and
         // add random edges among it's neighbours from the selected
         // neighbour k
         for(int joffset = 0; joffset < len; joffset++){

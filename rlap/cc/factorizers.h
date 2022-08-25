@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include "samplers.h"
+#include "preconditioner.h"
 #include "types.h"
 
 class Factorizer{
@@ -99,6 +100,9 @@ class NaiveApproximateCholesky: public Factorizer{
 // usage with numpy/scipy.
 class ApproximateCholesky: public Factorizer{
   public:
+    // Allow the user to pass a N x 3 matrix of (row, col, wt) entries of the
+    // adjacency matrix and configure the state on demand via the `setup` method.
+    ApproximateCholesky();
     // approximate cholesky factorization from the ground up
     ApproximateCholesky(Eigen::SparseMatrix<double>* Adj, std::string pre = "degree");
     ApproximateCholesky(Eigen::SparseMatrix<double> Adj, std::string pre = "degree");
@@ -108,6 +112,8 @@ class ApproximateCholesky: public Factorizer{
     // from the python layer to the c++ layer.
     ApproximateCholesky(std::string filename, int nrows, int ncols, std::string pre = "degree");
     ~ApproximateCholesky(){};
+    // setup the adjacency matrix via the edge info and other params;
+    void setup(Eigen::MatrixXd edge_info, int nrows, int ncols, std::string pre = "degree");
     // retrieve the adjancency matrix. helpful if factorizer was
     // initialized with a filename and dimension
     Eigen::SparseMatrix<double> getAdjacencyMatrix();
@@ -119,6 +125,8 @@ class ApproximateCholesky: public Factorizer{
     Eigen::MatrixXd getReconstructedLaplacian() override;
     // retrieve the pre-conditioner
     LDLi* getPreconditioner();
+    // retrieve the schur complements after eliminating 't' nodes
+    Eigen::MatrixXd getSchurComplement(int t);
     // solve for the unknowns
     Eigen::VectorXd solve(Eigen::VectorXd b);
     // return the number of iters of the underlying pcg solver
@@ -131,6 +139,7 @@ class ApproximateCholesky: public Factorizer{
     LDLi* _ldli;
     std::string _pre_str;
     int _num_iters = 0;
+    Preconditioner* _prec;
 };
 
 
