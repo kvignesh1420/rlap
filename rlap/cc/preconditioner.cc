@@ -253,7 +253,101 @@ LDLi* OrderedPreconditioner::getLDLi(){
 
 
 Eigen::MatrixXd OrderedPreconditioner::getSchurComplement(int t){
+    double n = _ordmat->n;
+
+    std::vector<ColumnElement>* colspace = new std::vector<ColumnElement>;
+    std::mt19937_64 rand_generator;
+    std::uniform_real_distribution<double> u_distribution(0, 1);
+    for(int i = 0; i < t; i++){
+        // std::cout << "====================== ComputeLDLi: column " << i << " ============================" << std::endl;
+
+        double len = getColumnLength(_ordmat, i, colspace);
+        // std::cout << "Length from column with multiedges = " << len << std::endl;
+        len = compressColumn(colspace, len);
+        // std::cout << "Length of column after compression = " << len << std::endl;
+
+        double csum = 0;
+        std::vector<double> cumspace;
+        for(int ii = 0; ii < len ; ii++){
+            csum += colspace->at(ii).val;
+            cumspace.push_back(csum);
+        }
+        double wdeg = csum;
+        double colScale = 1;
+
+        for(int joffset = 0; joffset < len-1; joffset++){
+            ColumnElement ce = colspace->at(joffset);
+            double w = ce.val*colScale;
+            double j = ce.row;
+            double f = double(w)/wdeg;
+
+            double u_r = u_distribution(rand_generator);
+            double r = u_r*(csum  - cumspace[joffset]) + cumspace[joffset];
+            double koff=len-1;
+            for(int k_i = 0; k_i < len; k_i++){
+                if(cumspace[k_i]>r){
+                    koff = k_i;
+                    break;
+                }
+            }
+            double k = colspace->at(koff).row;
+            // std::cout << "random value r = "<< r << " current row = " << j << " satisfied row = " << k << std::endl;
+            double newEdgeVal = w*(1-f);
+            if(j < k){
+                double jhead = _ordmat->cols[j];
+
+                OrderedElement* ord = new OrderedElement();
+                ord->row = k;
+                ord->next = jhead;
+                ord->val = newEdgeVal;
+                _ordmat->elements[ce.ptr] = ord;
+
+                _ordmat->cols[j] = ce.ptr;
+            } else{
+                double khead = _ordmat->cols[k];
+
+                OrderedElement* ord = new OrderedElement();
+                ord->row = j;
+                ord->next = khead;
+                ord->val = newEdgeVal;
+                _ordmat->elements[ce.ptr] = ord;
+
+                _ordmat->cols[k] = ce.ptr;
+            }
+
+            colScale = colScale*(1-f);
+            wdeg = wdeg - 2*w + w*w/wdeg;
+
+        }
+    }
+
+    std::vector<Eigen::Vector3d> edge_info_vector;
     Eigen::MatrixXd edge_info;
+
+    int count = t; // continue with the remaining nodes
+    int edge_info_counter = 0;
+    while (count < n){
+        double i = count;
+        double len = getColumnLength(_ordmat, i, colspace);
+        // std::cout << "Length from column with multiedges = " << len << std::endl;
+        len = compressColumn(colspace, len);
+        // std::cout << "Length of column after compression = " << len << std::endl;
+        for(int ii = 0; ii < len ; ii++){
+            double val = colspace->at(ii).val;
+            double row = colspace->at(ii).row;
+            Eigen::Vector3d temp(row, i, val);
+            edge_info_vector.push_back(temp);
+            // edge_info.row(edge_info_counter) << row, i, val;
+            edge_info_counter += 1;
+        }
+        count += 1;
+    }
+    edge_info.resize(edge_info_counter, 3);
+    for(int z = 0; z < edge_info_counter; z++){
+        // std::cout << "ROW: " << edge_info_vector[z] << std::endl;
+        edge_info.row(z) = edge_info_vector[z];
+    }
+
     return edge_info;
 }
 
@@ -728,12 +822,6 @@ LDLi* PriorityPreconditioner::getLDLi(){
 Eigen::MatrixXd PriorityPreconditioner::getSchurComplement(int t){
     PriorityMatrix* a = _pmat;
     double n = a->n;
-    LDLi* ldli = new LDLi();
-    ldli->col = std::vector<double>();
-    ldli->colptr = std::vector<double>();
-    ldli->rowval = std::vector<double>();
-    ldli->fval = std::vector<double>();
-
     std::vector<double> d(n, 0.0);
 
     DegreePQ* pq = getDegreePQ(a->degs);
