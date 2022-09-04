@@ -81,3 +81,18 @@ for instance, the `examples/solver` c++ target can now be executed as:
 ```
 $ bazel-bin/examples/solver
 ```
+
+For memory leak detection with valgrind, add the `build --cxxopt="-ggdb3"` setting in `.bazelrc` and run as follows:
+
+```
+$ bazel build //rlap:all
+$ bazel build //examples:all
+
+$ valgrind --leak-check=full \\
+         --show-leak-kinds=all \\
+         --track-origins=yes \\
+         --verbose \\
+         --log-file=valgrind-out.txt \\
+         ./bazel-bin/examples/solver
+```
+
