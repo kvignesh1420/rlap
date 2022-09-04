@@ -356,7 +356,6 @@ Eigen::MatrixXd OrderedPreconditioner::getSchurComplement(int t){
 
 PriorityPreconditioner::PriorityPreconditioner(Eigen::SparseMatrix<double>* A){
     _A = A;
-    _pmat = getPriorityMatrix();
 }
 
 std::vector<double> PriorityPreconditioner::getFlipIndices(Eigen::SparseMatrix<double>* M){
@@ -494,12 +493,12 @@ DegreePQ* PriorityPreconditioner::getDegreePQ(std::vector<double> degs){
             elem_i->key = key;
             elems.at(i) = elem_i;
 
-            DegreePQElement* elem_head = new DegreePQElement();
-            elem_head->prev = i;
-            elem_head->next = elems.at(head)->next;
-            elem_head->key = elems.at(head)->key;
-            // TODO: possible memory leak, delete the existing PQ element
-            elems.at(head) = elem_head;
+            // DegreePQElement* elem_head = new DegreePQElement();
+            // elem_head->prev = i;
+            // elem_head->next = elems.at(head)->next;
+            // elem_head->key = elems.at(head)->key;
+            // elems.at(head) = elem_head;
+            elems.at(head)->prev = i;
         }
         else{
             DegreePQElement* elem_i = new DegreePQElement();
@@ -538,12 +537,15 @@ double PriorityPreconditioner::DegreePQPop(DegreePQ* pq){
     // update the index of the node with min-degree in pq->lists
     pq->lists.at(pq->minlist) = next;
 
+    delete pq->elems.at(i);
+    pq->elems.at(i) = nullptr;
     if(next > -1){
-        DegreePQElement* elem_next = new DegreePQElement();
-        elem_next->prev = -1;
-        elem_next->next = pq->elems.at(next)->next;
-        elem_next->key = pq->elems.at(next)->key;
-        pq->elems.at(next) = elem_next;
+        // DegreePQElement* elem_next = new DegreePQElement();
+        // elem_next->prev = -1;
+        // elem_next->next = pq->elems.at(next)->next;
+        // elem_next->key = pq->elems.at(next)->key;
+        // pq->elems.at(next) = elem_next;
+        pq->elems.at(next)->prev = -1;
     }
 
     pq->nitems -= 1;
@@ -560,18 +562,20 @@ void PriorityPreconditioner::DegreePQMove(DegreePQ* pq, int i, double newkey, in
     // std::cout << "prev = " << prev << " next = " << next << std::endl;
     // remove i from the oldlist
     if(next > -1){
-        DegreePQElement* elem_next = new DegreePQElement();
-        elem_next->prev = prev;
-        elem_next->next = pq->elems.at(next)->next;
-        elem_next->key = pq->elems.at(next)->key;
-        pq->elems.at(next) = elem_next;
+        // DegreePQElement* elem_next = new DegreePQElement();
+        // elem_next->prev = prev;
+        // elem_next->next = pq->elems.at(next)->next;
+        // elem_next->key = pq->elems.at(next)->key;
+        // pq->elems.at(next) = elem_next;
+        pq->elems.at(next)->prev = prev;
     }
     if(prev > -1){
-        DegreePQElement* elem_prev = new DegreePQElement();
-        elem_prev->prev = pq->elems.at(prev)->prev;
-        elem_prev->next = next;
-        elem_prev->key = pq->elems.at(prev)->key;
-        pq->elems.at(prev) = elem_prev;
+        // DegreePQElement* elem_prev = new DegreePQElement();
+        // elem_prev->prev = pq->elems.at(prev)->prev;
+        // elem_prev->next = next;
+        // elem_prev->key = pq->elems.at(prev)->key;
+        // pq->elems.at(prev) = elem_prev;
+        pq->elems.at(prev)->next = next;
     } else{
         pq->lists.at(oldlist) = next;
     }
@@ -580,19 +584,23 @@ void PriorityPreconditioner::DegreePQMove(DegreePQ* pq, int i, double newkey, in
     double head = pq->lists.at(newlist);
     // std::cout << " head = " << head << std::endl;
     if(head > -1){
-        DegreePQElement* elem_head = new DegreePQElement();
-        elem_head->prev = i;
-        elem_head->next = pq->elems.at(head)->next;
-        elem_head->key = pq->elems.at(head)->key;
-        pq->elems.at(head) = elem_head;
+        // DegreePQElement* elem_head = new DegreePQElement();
+        // elem_head->prev = i;
+        // elem_head->next = pq->elems.at(head)->next;
+        // elem_head->key = pq->elems.at(head)->key;
+        // pq->elems.at(head) = elem_head;
+        pq->elems.at(head)->prev = i;
     }
     pq->lists.at(newlist) = i;
 
-    DegreePQElement* elem_i = new DegreePQElement();
-    elem_i->prev = -1;
-    elem_i->next = head;
-    elem_i->key = newkey;
-    pq->elems.at(i) = elem_i;
+    // DegreePQElement* elem_i = new DegreePQElement();
+    // elem_i->prev = -1;
+    // elem_i->next = head;
+    // elem_i->key = newkey;
+    // pq->elems.at(i) = elem_i;
+    pq->elems.at(i)->prev = -1;
+    pq->elems.at(i)->next = head;
+    pq->elems.at(i)->key = newkey;
     // std::cout << "moved in the PQ" << std::endl;
     return;
 }
@@ -613,11 +621,12 @@ void PriorityPreconditioner::DegreePQDec(DegreePQ* pq, int i){
             pq->minlist = newlist;
         }
     }else{
-        DegreePQElement* elem_i = new DegreePQElement();
-        elem_i->prev = pq->elems.at(i)->prev;
-        elem_i->next = pq->elems.at(i)->next;
-        elem_i->key = pq->elems.at(i)->key - 1;
-        pq->elems.at(i) = elem_i;
+        // DegreePQElement* elem_i = new DegreePQElement();
+        // elem_i->prev = pq->elems.at(i)->prev;
+        // elem_i->next = pq->elems.at(i)->next;
+        // elem_i->key = pq->elems.at(i)->key - 1;
+        // pq->elems.at(i) = elem_i;
+        pq->elems.at(i)->key -= 1;
     }
     // std::cout << "deced in the PQ" << std::endl;
     return;
@@ -633,11 +642,12 @@ void PriorityPreconditioner::DegreePQInc(DegreePQ* pq, int i){
     if(oldlist != newlist){
         DegreePQMove(pq, i, deg_i+1, oldlist, newlist);
     }else{
-        DegreePQElement* elem_i = new DegreePQElement();
-        elem_i->prev = pq->elems.at(i)->prev;
-        elem_i->next = pq->elems.at(i)->next;
-        elem_i->key = pq->elems.at(i)->key + 1;
-        pq->elems.at(i) = elem_i;
+        // DegreePQElement* elem_i = new DegreePQElement();
+        // elem_i->prev = pq->elems.at(i)->prev;
+        // elem_i->next = pq->elems.at(i)->next;
+        // elem_i->key = pq->elems.at(i)->key + 1;
+        // pq->elems.at(i) = elem_i;
+        pq->elems.at(i)->key += 1;
     }
     // std::cout << "inced in the PQ" << std::endl;
     return;
@@ -676,7 +686,7 @@ double PriorityPreconditioner::compressColumn(PriorityMatrix* a, std::vector<Pri
     // std::cout << "Compressing col of len = " << len << std::endl;
 
     std::sort(colspace->begin(), colspace->begin()+len,
-         [](PriorityElement* a, PriorityElement* b) {return a->row < b->row; });
+         [](PriorityElement* j, PriorityElement* k) {return j->row < k->row; });
 
     double ptr = PTR_RESET;
     double currow = -1;
@@ -699,14 +709,14 @@ double PriorityPreconditioner::compressColumn(PriorityMatrix* a, std::vector<Pri
     }
 
     std::sort(colspace->begin(), colspace->begin()+ptr+1,
-         [](PriorityElement* a, PriorityElement* b) {return a->val < b->val; });
+         [](PriorityElement* j, PriorityElement* k) {return j->val < k->val; });
     //  std::cout << "Compressed col to len = " << ptr+1 << std::endl;
     return ptr+1;
 }
 
 
 LDLi* PriorityPreconditioner::getLDLi(){
-    PriorityMatrix* a = _pmat;
+    PriorityMatrix* a = getPriorityMatrix();
     double n = a->n;
     LDLi* ldli = new LDLi();
     ldli->col = std::vector<double>();
@@ -815,14 +825,34 @@ LDLi* PriorityPreconditioner::getLDLi(){
     }
     ldli->colptr.push_back(ldli_row_ptr);
     ldli->d = d;
+
+    // delete colspace
+    delete colspace;
+    colspace = nullptr;
+
+    // delete left-over pointers to pq elements
+    for(auto pq_element: pq->elems){
+        delete pq_element;
+        pq_element = nullptr;
+    }
+    delete pq;
+    pq = nullptr;
+
+    // delete the pointers in priority matrix
+    for(auto ll_element: a->lles){
+        delete ll_element;
+        ll_element = nullptr;
+    }
+    delete a;
+    a = nullptr;
+
     return ldli;
 }
 
 
 Eigen::MatrixXd PriorityPreconditioner::getSchurComplement(int t){
-    PriorityMatrix* a = _pmat;
+    PriorityMatrix* a = getPriorityMatrix();
     double n = a->n;
-    std::vector<double> d(n, 0.0);
 
     DegreePQ* pq = getDegreePQ(a->degs);
 
@@ -936,6 +966,25 @@ Eigen::MatrixXd PriorityPreconditioner::getSchurComplement(int t){
         edge_info.row(z) = edge_info_vector[z];
     }
 
+    // delete colspace
+    delete colspace;
+    colspace = nullptr;
+
+    // delete left-over pointers to pq elements
+    for(auto pq_element: pq->elems){
+        delete pq_element;
+        pq_element = nullptr;
+    }
+    delete pq;
+    pq = nullptr;
+
+    // delete the pointers in priority matrix
+    for(auto ll_element: a->lles){
+        delete ll_element;
+        ll_element = nullptr;
+    }
+    delete a;
+    a = nullptr;
     return edge_info;
 }
 
@@ -944,11 +993,10 @@ Eigen::MatrixXd PriorityPreconditioner::getSchurComplement(int t){
 CoarseningPreconditioner::CoarseningPreconditioner(Eigen::SparseMatrix<double>* A):
     PriorityPreconditioner(A){
     _A = A;
-    _pmat = getPriorityMatrix();
 }
 
 LDLi* CoarseningPreconditioner::getLDLi(){
-    PriorityMatrix* a = _pmat;
+    PriorityMatrix* a = getPriorityMatrix();
     double n = a->n;
     LDLi* ldli = new LDLi();
     ldli->col = std::vector<double>();
@@ -1055,5 +1103,164 @@ LDLi* CoarseningPreconditioner::getLDLi(){
     }
     ldli->colptr.push_back(ldli_row_ptr);
     ldli->d = d;
+
+    // delete colspace
+    delete colspace;
+    colspace = nullptr;
+
+    // delete left-over pointers to pq elements
+    for(auto pq_element: pq->elems){
+        delete pq_element;
+        pq_element = nullptr;
+    }
+    delete pq;
+    pq = nullptr;
+
+    // delete the pointers in priority matrix
+    for(auto ll_element: a->lles){
+        delete ll_element;
+        ll_element = nullptr;
+    }
+    delete a;
+    a = nullptr;
     return ldli;
+}
+
+
+Eigen::MatrixXd CoarseningPreconditioner::getSchurComplement(int t){
+
+    PriorityMatrix* a = getPriorityMatrix();
+    double n = a->n;
+    
+    DegreePQ* pq = getDegreePQ(a->degs);
+
+    double it = 1;
+    std::vector<PriorityElement*>* colspace = new std::vector<PriorityElement*>();
+    std::mt19937_64 rand_generator;
+    std::uniform_real_distribution<double> u_distribution(0, 1);
+    while(it <= t && it < n){
+        double i = DegreePQPop(pq);
+
+        it += 1;
+
+        double len = getColumnLength(a, i, colspace);
+        len = compressColumn(a, colspace, len, pq);
+        // continue to the next node if there are no edges for this node
+        if(len < 1) continue;
+
+        double csum = 0;
+        std::vector<double> cumspace;
+        std::vector<double> vals;
+        for(int ii = 0; ii < len ; ii++){
+            vals.push_back(colspace->at(ii)->val);
+            csum += colspace->at(ii)->val;
+            cumspace.push_back(csum);
+        }
+        double wdeg = csum;
+
+        // choose the neighbour with probability proportional
+        // to its weight
+        double u_r = u_distribution(rand_generator);
+        double r = u_r*(csum);
+        double koff = len-1;
+        for(int k_i = 0; k_i < len; k_i++){
+            if(cumspace[k_i]>r){
+                koff = k_i;
+                break;
+            }
+        }
+        double k = colspace->at(koff)->row;
+        double w_k = vals.at(koff);
+        // std::cout << " it = " << it << " Chose random vertex: " << k << " offset " << koff << std::endl;
+        PriorityElement* k_pe = colspace->at(koff);
+        // collapse the current node onto the selected neighbour
+        k_pe->val = 0;
+        k_pe->reverse->val = 0;
+        DegreePQDec(pq, k);
+        // remove edges from node i to it's neighbours and
+        // add random edges among it's neighbours from the selected
+        // neighbour k
+        for(int joffset = 0; joffset < len; joffset++){
+            if(joffset == koff) continue;
+
+            PriorityElement* ll = colspace->at(joffset);
+            // double w = vals.at(joffset) * colScale;
+            double w = vals.at(joffset);
+            double j = ll->row;
+            // std::cout << " j  = " << j << std::endl;
+            PriorityElement* revj = ll->reverse;
+
+            // double f = double(w)/wdeg;
+            vals.at(joffset) = 0;
+
+            DegreePQInc(pq, k);
+
+            // double newEdgeVal = f*(1-f)*wdeg;
+            double newEdgeVal = (w_k * w)/(w_k + w);
+
+            // row k in col j
+            revj->row = k;
+            revj->val = newEdgeVal;
+            revj->reverse = ll;
+
+            // row j in col k
+            PriorityElement* khead = a->cols.at(k);
+            a->cols.at(k) = ll;
+            ll->next = khead;
+            ll->reverse = revj;
+            ll->val = newEdgeVal;
+            ll->row = j;
+
+        }
+
+    }
+
+    std::vector<Eigen::Vector3d> edge_info_vector;
+    Eigen::MatrixXd edge_info;
+
+    int count = 0;
+    int edge_info_counter = 0;
+    while (count < n-t){
+        double i = DegreePQPop(pq);
+        double len = getColumnLength(a, i, colspace);
+        // std::cout << "Column: " << i << " length: " << len << std::endl;
+        len = compressColumn(a, colspace, len, pq);
+        // std::cout << "Column: " << i << " compressed length: " << len << std::endl;
+        for(int ii = 0; ii < len ; ii++){
+            double val = colspace->at(ii)->val;
+            double row = colspace->at(ii)->row;
+            Eigen::Vector3d temp(row, i, val);
+            edge_info_vector.push_back(temp);
+            // edge_info.row(edge_info_counter) << row, i, val;
+            edge_info_counter += 1;
+        }
+        count += 1;
+    }
+    edge_info.resize(edge_info_counter, 3);
+    for(int z = 0; z < edge_info_counter; z++){
+        // std::cout << "ROW: " << edge_info_vector[z] << std::endl;
+        edge_info.row(z) = edge_info_vector[z];
+    }
+
+    // delete colspace
+    delete colspace;
+    colspace = nullptr;
+
+    // delete left-over pointers to pq elements
+    for(auto pq_element: pq->elems){
+        delete pq_element;
+        pq_element = nullptr;
+    }
+    delete pq;
+    pq = nullptr;
+
+    // delete the pointers in priority matrix
+    for(auto ll_element: a->lles){
+        delete ll_element;
+        ll_element = nullptr;
+    }
+    delete a;
+    a = nullptr;
+    return edge_info;
+
 }

@@ -35,6 +35,7 @@ Eigen::SparseMatrix<double>* Factorizer::computeLaplacian(Eigen::SparseMatrix<do
         std::cout << "Error: Laplacian is not symmetric";
         exit(0);
     }
+    delete D;
     return L;
 }
 
@@ -170,21 +171,23 @@ void ApproximateCholesky::setup(Eigen::MatrixXd edge_info, int nrows, int ncols,
     _A = r->Read();
     _L = this->computeLaplacian(_A);
     _pre_str = pre;
-    Preconditioner* prec;
+    if (_prec != nullptr){
+        delete _prec;
+        _prec = nullptr;
+    }
     if(_pre_str == "order"){
         // TRACER("using OrderedPreconditioner\n");
-        prec = new OrderedPreconditioner(_A);
+        _prec = new OrderedPreconditioner(_A);
     }
     else if(_pre_str == "coarsen"){
         // TRACER("using CoarseningPreconditioner\n");
-        prec = new CoarseningPreconditioner(_A);
+        _prec = new CoarseningPreconditioner(_A);
     }
     else{
         // default option
         // TRACER("using PriorityPreconditioner\n");
-        prec = new PriorityPreconditioner(_A);
+        _prec = new PriorityPreconditioner(_A);
     }
-    _prec = prec;
 }
 
 ApproximateCholesky::ApproximateCholesky(Eigen::SparseMatrix<double>* Adj, std::string pre){
@@ -222,21 +225,23 @@ Eigen::VectorXd ApproximateCholesky::solve(Eigen::VectorXd b){
 }
 
 void ApproximateCholesky::compute(){
-    Preconditioner* prec;
+    if(_prec != nullptr){
+        delete _prec;
+        _prec = nullptr;
+    }
     if(_pre_str == "order"){
         TRACER("using OrderedPreconditioner\n");
-        prec = new OrderedPreconditioner(_A);
+        _prec = new OrderedPreconditioner(_A);
     }
     else if(_pre_str == "coarsen"){
         TRACER("using CoarseningPreconditioner\n");
-        prec = new CoarseningPreconditioner(_A);
+        _prec = new CoarseningPreconditioner(_A);
     }
     else{
         // default option
         TRACER("using PriorityPreconditioner\n");
-        prec = new PriorityPreconditioner(_A);
+        _prec = new PriorityPreconditioner(_A);
     }
-    _prec = prec;
     _ldli = _prec->getLDLi();
     std::cout << "ratio of preconditioned egdes to original edges = " << 2*float(_ldli->fval.size())/_A->nonZeros() << std::endl;
 }

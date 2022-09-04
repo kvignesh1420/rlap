@@ -51,7 +51,6 @@ class PriorityPreconditioner : public Preconditioner{
 
   private:
     Eigen::SparseMatrix<double>* _A;
-    PriorityMatrix* _pmat;
 };
 
 class CoarseningPreconditioner : public PriorityPreconditioner{
@@ -59,9 +58,9 @@ class CoarseningPreconditioner : public PriorityPreconditioner{
     CoarseningPreconditioner(Eigen::SparseMatrix<double>* A);
     ~CoarseningPreconditioner(){};
     LDLi* getLDLi() override;
+    Eigen::MatrixXd getSchurComplement(int t) override;
   private:
     Eigen::SparseMatrix<double>* _A;
-    PriorityMatrix* _pmat;
 };
 
 #endif

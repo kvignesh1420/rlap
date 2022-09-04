@@ -111,7 +111,12 @@ class ApproximateCholesky: public Factorizer{
     // This reduces the overhead of copying scipy csc matrices
     // from the python layer to the c++ layer.
     ApproximateCholesky(std::string filename, int nrows, int ncols, std::string pre = "degree");
-    ~ApproximateCholesky(){};
+    ~ApproximateCholesky(){
+      delete _prec;
+      delete _ldli;
+      delete _A;
+      delete _L;
+    };
     // setup the adjacency matrix via the edge info and other params;
     void setup(Eigen::MatrixXd edge_info, int nrows, int ncols, std::string pre = "degree");
     // retrieve the adjancency matrix. helpful if factorizer was
@@ -134,12 +139,12 @@ class ApproximateCholesky: public Factorizer{
     // return the ratio of edges in preconditioned/original matrix.
     double getSparsityRatio();
   private:
-    Eigen::SparseMatrix<double>* _A;
-    Eigen::SparseMatrix<double>* _L;
-    LDLi* _ldli;
+    Eigen::SparseMatrix<double>* _A = nullptr;
+    Eigen::SparseMatrix<double>* _L = nullptr;
+    LDLi* _ldli = nullptr;
     std::string _pre_str;
     int _num_iters = 0;
-    Preconditioner* _prec;
+    Preconditioner* _prec = nullptr;
 };
 
 

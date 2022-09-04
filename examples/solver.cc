@@ -58,5 +58,6 @@ int main(){
     std::cout << "(L*x - b_m).norm()/b_m.norm() = " << (L*x - b_m).norm()/b_m.norm() << std::endl;
     std::cout << "abs(x_t.norm() - x.norm()) = " << std::abs(x_t.norm() - x.norm()) << std::endl;
 
+    filepath.clear();
     return 0;
 }
