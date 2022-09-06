@@ -5,6 +5,7 @@ import GCL.augmentors as A
 import torch.nn.functional as F
 import torch_geometric.transforms as T
 
+import time
 from tqdm import tqdm
 from torch.optim import Adam, AdamW
 from GCL.eval import get_split, LREvaluator
@@ -27,15 +28,15 @@ class rLAP(A.Augmentor):
         # print("EDGE INDEX SHAPE: ", edge_index.shape)
         _edge_weights = edge_weights
         if _edge_weights is None:
-            edge_weights = torch.ones((1, edge_index.shape[1]))
+            edge_weights = torch.ones((1, edge_index.shape[1])).to(edge_index.device)
         # print("EDGE WT SHAPE: ", edge_weights.shape)
         edge_info = torch.concat((edge_index, edge_weights), dim=0).t()
         # print("EDGE INFO SHAPE: ", edge_info.shape)
-        self.ac.setup(edge_info, num_nodes, num_nodes, "order")
+        self.ac.setup(edge_info.to("cpu"), num_nodes, num_nodes, "degree")
         sparse_edge_info = self.ac.get_schur_complement(self.t)
         # print("sparse_edge_info shape", sparse_edge_info.shape)
-        sampled_edge_index = torch.Tensor(sparse_edge_info[:,:2]).long().t()
-        sampled_edge_weights = torch.Tensor(sparse_edge_info[:,-1]).t()
+        sampled_edge_index = torch.Tensor(sparse_edge_info[:,:2]).long().t().to(edge_index.device)
+        sampled_edge_weights = torch.Tensor(sparse_edge_info[:,-1]).t().to(edge_index.device)
         if _edge_weights is None:
             sampled_edge_weights = None
         else:
@@ -72,8 +73,12 @@ class Encoder(torch.nn.Module):
 
     def forward(self, x, edge_index, edge_weight=None):
         aug1, aug2 = self.augmentor
+        s = time.time()
         x1, edge_index1, edge_weight1 = aug1(x, edge_index, edge_weight)
+        e1 = time.time()
         x2, edge_index2, edge_weight2 = aug2(x, edge_index, edge_weight)
+        e2 = time.time()
+        print("LATENCIES OF AUG1: {}, AUG2: {}".format(e1-s, e2-e1))
         z = self.encoder(x, edge_index, edge_weight)
         z1 = self.encoder(x1, edge_index1, edge_weight1)
         z2 = self.encoder(x2, edge_index2, edge_weight2)
@@ -106,8 +111,8 @@ def test(encoder_model, data):
 def main():
     device = torch.device('cpu')
     path = osp.join(osp.expanduser('~'), 'datasets')
-    dataset = Planetoid(path, name='Cora', transform=T.NormalizeFeatures())
-    # dataset = Coauthor(path, name="Physics", transform=T.NormalizeFeatures())
+    # dataset = Planetoid(path, name='Cora', transform=T.NormalizeFeatures())
+    dataset = Coauthor(path, name="CS", transform=T.NormalizeFeatures())
     # dataset = WikiCS(path, transform=T.NormalizeFeatures())
     # dataset = SNAPDataset(path, name="soc-Pokec", transform=T.NormalizeFeatures())
     # dataset = SNAPDataset(path, name="ego-facebook", transform=T.NormalizeFeatures())
@@ -121,8 +126,9 @@ def main():
     # data.edge_attr = torch.cat([data.edge_attr, data.edge_attr], dim=0)
     print(" IS DATA UNDIRECTED: ", data.is_undirected())
 
-    aug1 = A.Compose([rLAP(500), A.FeatureMasking(pf=0.3)])
-    aug2 = A.Compose([rLAP(500), A.FeatureMasking(pf=0.3)])
+    # A.PPRDiffusion(alpha=0.2, use_cache=False)
+    aug1 = A.Compose([A.PPRDiffusion(alpha=0.2, use_cache=False), A.FeatureMasking(pf=0.3)])
+    aug2 = A.Compose([rLAP(1500), A.FeatureMasking(pf=0.3)])
 
     gconv = GConv(input_dim=dataset.num_features, hidden_dim=128, activation=torch.nn.ReLU, num_layers=2).to(device)
     encoder_model = Encoder(encoder=gconv, augmentor=(aug1, aug2), hidden_dim=128, proj_dim=128).to(device)
