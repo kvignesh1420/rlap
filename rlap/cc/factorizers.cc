@@ -179,6 +179,10 @@ void ApproximateCholesky::setup(Eigen::MatrixXd edge_info, int nrows, int ncols,
         // TRACER("using OrderedPreconditioner\n");
         _prec = new OrderedPreconditioner(_A);
     }
+    else if(_pre_str == "random"){
+        // TRACER("using CoarseningPreconditioner\n");
+        _prec = new RandomPreconditioner(_A);
+    }
     else if(_pre_str == "coarsen"){
         // TRACER("using CoarseningPreconditioner\n");
         _prec = new CoarseningPreconditioner(_A);

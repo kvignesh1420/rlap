@@ -15,12 +15,12 @@ with open("data/roadNet-CA_adj.tsv", "r") as f:
         a[1] -= 1
         edge_info.append(a)
 edge_info = torch.Tensor(np.array(edge_info))
-a = ApproximateCholesky()
 n = 1965206
-a.setup(edge_info, n, n, "order")
-res = a.get_schur_complement(100000)
-print(res.shape)
-b = ApproximateCholesky()
-b.setup(edge_info, n, n, "coarsen")
-res_b = b.get_schur_complement(100000)
-print(res_b.shape)
+frac = 0.3
+remaining_n = int(n * frac)
+
+for strat in ["order", "coarsen", "random", "degree"]:
+    a = ApproximateCholesky()
+    a.setup(edge_info, n, n, strat)
+    res_a = a.get_schur_complement(remaining_n)
+    print("STRAT: {} SC SHAPE: {}".format(strat, res_a.shape))

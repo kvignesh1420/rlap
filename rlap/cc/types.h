@@ -125,6 +125,18 @@ typedef struct DegreePQ{
     double n;
 } DegreePQ;
 
+typedef struct RandomPQ{
+    // Represents a priority queue structure for random ordering of nodes.
+
+    // a vector whose index representing the node ids
+    // in a random order.
+    std::vector<double> node_id;
+
+    // number of items in the queue
+    double nitems;
+
+} RandomPQ;
+
 
 typedef struct OrderedElement{
     // Represents an element of a matrix along with the

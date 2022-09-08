@@ -53,6 +53,27 @@ class PriorityPreconditioner : public Preconditioner{
     Eigen::SparseMatrix<double>* _A;
 };
 
+class RandomPreconditioner : public Preconditioner{
+  public:
+    RandomPreconditioner(Eigen::SparseMatrix<double>* A);
+    ~RandomPreconditioner(){};
+    LDLi* getLDLi() override;
+    Eigen::MatrixXd getSchurComplement(int t) override;
+
+  protected:
+    PriorityMatrix* getPriorityMatrix();
+    void printColumn(PriorityMatrix* pmat, int i);
+    RandomPQ* getRandomPQ(std::vector<double> a);
+    double RandomPQPop(RandomPQ* pq);
+    std::vector<double> getFlipIndices(Eigen::SparseMatrix<double>* M);
+    double getColumnLength(PriorityMatrix* pmat, int i, std::vector<PriorityElement*>* colspace);
+    double compressColumn(PriorityMatrix* pmat, std::vector<PriorityElement*>* colspace, double len);
+    void printFlipIndices(std::vector<double> fi);
+
+  private:
+    Eigen::SparseMatrix<double>* _A;
+};
+
 class CoarseningPreconditioner : public PriorityPreconditioner{
   public:
     CoarseningPreconditioner(Eigen::SparseMatrix<double>* A);
