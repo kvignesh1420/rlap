@@ -46,7 +46,8 @@ class PriorityPreconditioner : public Preconditioner{
     void DegreePQInc(DegreePQ* pq, int i);
     std::vector<double> getFlipIndices(Eigen::SparseMatrix<double>* M);
     double getColumnLength(PriorityMatrix* pmat, int i, std::vector<PriorityElement*>* colspace);
-    double compressColumn(PriorityMatrix* pmat, std::vector<PriorityElement*>* colspace, double len, DegreePQ* pq);
+    double compressColumn(std::vector<PriorityElement*>* colspace, double len, DegreePQ* pq);
+    double compressColumnSC(std::vector<PriorityElement*>* colspace, double len, DegreePQ* pq);
     void printFlipIndices(std::vector<double> fi);
 
   private:
@@ -67,7 +68,8 @@ class RandomPreconditioner : public Preconditioner{
     double RandomPQPop(RandomPQ* pq);
     std::vector<double> getFlipIndices(Eigen::SparseMatrix<double>* M);
     double getColumnLength(PriorityMatrix* pmat, int i, std::vector<PriorityElement*>* colspace);
-    double compressColumn(PriorityMatrix* pmat, std::vector<PriorityElement*>* colspace, double len);
+    double compressColumn(std::vector<PriorityElement*>* colspace, double len);
+    double compressColumnSC(std::vector<PriorityElement*>* colspace, double len);
     void printFlipIndices(std::vector<double> fi);
 
   private:

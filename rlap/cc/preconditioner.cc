@@ -683,7 +683,7 @@ double PriorityPreconditioner::getColumnLength(PriorityMatrix* pmat, int i, std:
     return len;
 }
 
-double PriorityPreconditioner::compressColumn(PriorityMatrix* a, std::vector<PriorityElement*>* colspace, double len, DegreePQ* pq){
+double PriorityPreconditioner::compressColumn(std::vector<PriorityElement*>* colspace, double len, DegreePQ* pq){
     // std::cout << "Compressing col of len = " << len << std::endl;
 
     std::sort(colspace->begin(), colspace->begin()+len,
@@ -706,6 +706,38 @@ double PriorityPreconditioner::compressColumn(PriorityMatrix* a, std::vector<Pri
             colspace->at(i)->reverse->val = 0;
 
             DegreePQDec(pq, currow);
+        }
+    }
+
+    std::sort(colspace->begin(), colspace->begin()+ptr+1,
+         [](PriorityElement* j, PriorityElement* k) {return j->val < k->val; });
+    //  std::cout << "Compressed col to len = " << ptr+1 << std::endl;
+    return ptr+1;
+}
+
+double PriorityPreconditioner::compressColumnSC(std::vector<PriorityElement*>* colspace, double len, DegreePQ* pq){
+    // std::cout << "Compressing col of len = " << len << std::endl;
+
+    std::sort(colspace->begin(), colspace->begin()+len,
+         [](PriorityElement* j, PriorityElement* k) {return j->row < k->row; });
+
+    double ptr = PTR_RESET;
+    double currow = -1;
+
+    for(int i = 0; i < len; i++){
+        if(colspace->at(i)->row != currow){
+            // std::cout << "currrow != colspace[i].row " << currow << " " << colspace->at(i)->row << std::endl;
+
+            currow = colspace->at(i)->row;
+            ptr += 1;
+            colspace->at(ptr) = colspace->at(i);
+        }
+        else{
+            // std::cout << "currrow == colspace[i]->row " << currow << std::endl;
+            colspace->at(ptr)->val += colspace->at(i)->val;
+            // colspace->at(i)->reverse->val = 0;
+
+            // DegreePQDec(pq, currow);
         }
     }
 
@@ -744,7 +776,7 @@ LDLi* PriorityPreconditioner::getLDLi(){
         it += 1;
 
         double len = getColumnLength(a, i, colspace);
-        len = compressColumn(a, colspace, len, pq);
+        len = compressColumn(colspace, len, pq);
         double csum = 0;
         std::vector<double> cumspace;
         std::vector<double> vals;
@@ -869,7 +901,7 @@ Eigen::MatrixXd PriorityPreconditioner::getSchurComplement(int t){
         it += 1;
 
         double len = getColumnLength(a, i, colspace);
-        len = compressColumn(a, colspace, len, pq);
+        len = compressColumn(colspace, len, pq);
         double csum = 0;
         std::vector<double> cumspace;
         std::vector<double> vals;
@@ -943,13 +975,12 @@ Eigen::MatrixXd PriorityPreconditioner::getSchurComplement(int t){
     std::vector<Eigen::Vector3d> edge_info_vector;
     Eigen::MatrixXd edge_info;
 
-    int count = 0;
     int edge_info_counter = 0;
-    while (count < n-t){
+    while (pq->nitems > 0){
         double i = DegreePQPop(pq);
         double len = getColumnLength(a, i, colspace);
         // std::cout << "Column: " << i << " length: " << len << std::endl;
-        len = compressColumn(a, colspace, len, pq);
+        len = compressColumnSC(colspace, len, pq);
         // std::cout << "Column: " << i << " compressed length: " << len << std::endl;
         for(int ii = 0; ii < len ; ii++){
             double val = colspace->at(ii)->val;
@@ -959,7 +990,6 @@ Eigen::MatrixXd PriorityPreconditioner::getSchurComplement(int t){
             // edge_info.row(edge_info_counter) << row, i, val;
             edge_info_counter += 1;
         }
-        count += 1;
     }
     edge_info.resize(edge_info_counter, 3);
     for(int z = 0; z < edge_info_counter; z++){
@@ -1164,7 +1194,7 @@ double RandomPreconditioner::getColumnLength(PriorityMatrix* pmat, int i, std::v
     return len;
 }
 
-double RandomPreconditioner::compressColumn(PriorityMatrix* a, std::vector<PriorityElement*>* colspace, double len){
+double RandomPreconditioner::compressColumn(std::vector<PriorityElement*>* colspace, double len){
     // std::cout << "Compressing col of len = " << len << std::endl;
 
     std::sort(colspace->begin(), colspace->begin()+len,
@@ -1185,6 +1215,36 @@ double RandomPreconditioner::compressColumn(PriorityMatrix* a, std::vector<Prior
             // std::cout << "currrow == colspace[i]->row " << currow << std::endl;
             colspace->at(ptr)->val += colspace->at(i)->val;
             colspace->at(i)->reverse->val = 0;
+        }
+    }
+
+    std::sort(colspace->begin(), colspace->begin()+ptr+1,
+         [](PriorityElement* j, PriorityElement* k) {return j->val < k->val; });
+    //  std::cout << "Compressed col to len = " << ptr+1 << std::endl;
+    return ptr+1;
+}
+
+double RandomPreconditioner::compressColumnSC(std::vector<PriorityElement*>* colspace, double len){
+    // std::cout << "Compressing col of len = " << len << std::endl;
+
+    std::sort(colspace->begin(), colspace->begin()+len,
+         [](PriorityElement* j, PriorityElement* k) {return j->row < k->row; });
+
+    double ptr = PTR_RESET;
+    double currow = -1;
+
+    for(int i = 0; i < len; i++){
+        if(colspace->at(i)->row != currow){
+            // std::cout << "currrow != colspace[i].row " << currow << " " << colspace->at(i)->row << std::endl;
+
+            currow = colspace->at(i)->row;
+            ptr += 1;
+            colspace->at(ptr) = colspace->at(i);
+        }
+        else{
+            // std::cout << "currrow == colspace[i]->row " << currow << std::endl;
+            colspace->at(ptr)->val += colspace->at(i)->val;
+            // colspace->at(i)->reverse->val = 0;
         }
     }
 
@@ -1223,7 +1283,7 @@ LDLi* RandomPreconditioner::getLDLi(){
         it += 1;
 
         double len = getColumnLength(a, i, colspace);
-        len = compressColumn(a, colspace, len);
+        len = compressColumn(colspace, len);
         double csum = 0;
         std::vector<double> cumspace;
         std::vector<double> vals;
@@ -1336,10 +1396,8 @@ Eigen::MatrixXd RandomPreconditioner::getSchurComplement(int t){
         double i = RandomPQPop(pq);
         // std::cout << "Eliminated node " << i << std::endl;
 
-        it += 1;
-
         double len = getColumnLength(a, i, colspace);
-        len = compressColumn(a, colspace, len);
+        len = compressColumn(colspace, len);
         double csum = 0;
         std::vector<double> cumspace;
         std::vector<double> vals;
@@ -1371,6 +1429,7 @@ Eigen::MatrixXd RandomPreconditioner::getSchurComplement(int t){
             double k = colspace->at(koff)->row;
 
             double newEdgeVal = f*(1-f)*wdeg;
+            // std::cout << "NEW EDGE: " << k << " " << j << " " << newEdgeVal << std::endl;
 
             // row k in col j
             revj->row = k;
@@ -1384,6 +1443,15 @@ Eigen::MatrixXd RandomPreconditioner::getSchurComplement(int t){
             ll->reverse = revj;
             ll->val = newEdgeVal;
             ll->row = j;
+            // std::cout << "--------------------------------------------------" << std::endl;
+            // std::cout << "a->cols.at(k) val" <<  ll->val << " " << a->cols.at(k)->val << std::endl;
+            // PriorityElement* temp = a->cols[k];
+            // while(temp->next != temp){
+            //     std::cout << "ROW: " << temp->row << " VAL: " << temp->val << std::endl;
+            //     temp = temp->next;
+            // }
+            // std::cout << "ROW: " << temp->row << " VAL: " << temp->val << std::endl;
+            // std::cout << "--------------------------------------------------" << std::endl;
 
             colScale = colScale*(1-f);
             wdeg = wdeg*(1-f)*(1-f);
@@ -1392,24 +1460,36 @@ Eigen::MatrixXd RandomPreconditioner::getSchurComplement(int t){
         if(len > 0){
             // std::cout << "len = " << len << "vals len = " << vals.size() << " colspace len = " << colspace->size() << std::endl;
             PriorityElement* ll = colspace->at(len-1);
-            double j = ll->row;
+            // double j = ll->row;
             PriorityElement* revj = ll->reverse;
             ll->val = 0;
             revj->val = 0;
 
         }
+
+        it += 1;
     }
 
+    // std::cout << "------------------------------- PREPARING SC -------------------------------" << std::endl;
     std::vector<Eigen::Vector3d> edge_info_vector;
     Eigen::MatrixXd edge_info;
 
-    int count = 0;
+    // std::cout << "REMAINING ELEMENTS: " << pq->nitems << std::endl;
     int edge_info_counter = 0;
-    while (count < n-t){
+    while (pq->nitems > 0){
         double i = RandomPQPop(pq);
+        // std::cout << "Element: " << i << std::endl;
         double len = getColumnLength(a, i, colspace);
         // std::cout << "Column: " << i << " length: " << len << std::endl;
-        len = compressColumn(a, colspace, len);
+        // std::cout << "--------------------------------------------------" << std::endl;
+        // PriorityElement* temp = a->cols[i];
+        // while(temp->next != temp){
+        //     std::cout << "ROW: " << temp->row << " VAL: " << temp->val << std::endl;
+        //     temp = temp->next;
+        // }
+        // std::cout << "ROW: " << temp->row << " VAL: " << temp->val << std::endl;
+        // std::cout << "--------------------------------------------------" << std::endl;
+        len = compressColumnSC(colspace, len);
         // std::cout << "Column: " << i << " compressed length: " << len << std::endl;
         for(int ii = 0; ii < len ; ii++){
             double val = colspace->at(ii)->val;
@@ -1419,7 +1499,6 @@ Eigen::MatrixXd RandomPreconditioner::getSchurComplement(int t){
             // edge_info.row(edge_info_counter) << row, i, val;
             edge_info_counter += 1;
         }
-        count += 1;
     }
     edge_info.resize(edge_info_counter, 3);
     for(int z = 0; z < edge_info_counter; z++){
@@ -1484,7 +1563,7 @@ LDLi* CoarseningPreconditioner::getLDLi(){
         it += 1;
 
         double len = getColumnLength(a, i, colspace);
-        len = compressColumn(a, colspace, len, pq);
+        len = compressColumn(colspace, len, pq);
         // continue to the next node if there are no edges for this node
         if(len < 1) continue;
 
@@ -1593,7 +1672,7 @@ Eigen::MatrixXd CoarseningPreconditioner::getSchurComplement(int t){
 
     PriorityMatrix* a = getPriorityMatrix();
     double n = a->n;
-    
+
     DegreePQ* pq = getDegreePQ(a->degs);
 
     double it = 1;
@@ -1606,7 +1685,7 @@ Eigen::MatrixXd CoarseningPreconditioner::getSchurComplement(int t){
         it += 1;
 
         double len = getColumnLength(a, i, colspace);
-        len = compressColumn(a, colspace, len, pq);
+        len = compressColumn(colspace, len, pq);
         // continue to the next node if there are no edges for this node
         if(len < 1) continue;
 
@@ -1618,7 +1697,7 @@ Eigen::MatrixXd CoarseningPreconditioner::getSchurComplement(int t){
             csum += colspace->at(ii)->val;
             cumspace.push_back(csum);
         }
-        double wdeg = csum;
+        // double wdeg = csum;
 
         // choose the neighbour with probability proportional
         // to its weight
@@ -1680,13 +1759,12 @@ Eigen::MatrixXd CoarseningPreconditioner::getSchurComplement(int t){
     std::vector<Eigen::Vector3d> edge_info_vector;
     Eigen::MatrixXd edge_info;
 
-    int count = 0;
     int edge_info_counter = 0;
-    while (count < n-t){
+    while (pq->nitems > 0){
         double i = DegreePQPop(pq);
         double len = getColumnLength(a, i, colspace);
         // std::cout << "Column: " << i << " length: " << len << std::endl;
-        len = compressColumn(a, colspace, len, pq);
+        len = compressColumnSC(colspace, len, pq);
         // std::cout << "Column: " << i << " compressed length: " << len << std::endl;
         for(int ii = 0; ii < len ; ii++){
             double val = colspace->at(ii)->val;
@@ -1696,7 +1774,6 @@ Eigen::MatrixXd CoarseningPreconditioner::getSchurComplement(int t){
             // edge_info.row(edge_info_counter) << row, i, val;
             edge_info_counter += 1;
         }
-        count += 1;
     }
     edge_info.resize(edge_info_counter, 3);
     for(int z = 0; z < edge_info_counter; z++){

@@ -19,7 +19,7 @@ n = 1965206
 frac = 0.3
 remaining_n = int(n * frac)
 
-for strat in ["order", "coarsen", "random", "degree"]:
+for strat in ["random", "degree", "coarsen"]:
     a = ApproximateCholesky()
     a.setup(edge_info, n, n, strat)
     res_a = a.get_schur_complement(remaining_n)
