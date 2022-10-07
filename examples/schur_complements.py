@@ -17,10 +17,12 @@ with open("data/roadNet-CA_adj.tsv", "r") as f:
 edge_info = torch.Tensor(np.array(edge_info))
 n = 1965206
 frac = 0.3
-remaining_n = int(n * frac)
+eliminate_n = int(n * frac)
+print("Remaining n: ", n - eliminate_n)
 
 for strat in ["random", "degree", "coarsen"]:
     a = ApproximateCholesky()
     a.setup(edge_info, n, n, strat)
-    res_a = a.get_schur_complement(remaining_n)
+    res_a = a.get_schur_complement(eliminate_n)
     print("STRAT: {} SC SHAPE: {}".format(strat, res_a.shape))
+    print("Number of unique nodes in SC: ", np.unique(res_a[:,:2]).shape)

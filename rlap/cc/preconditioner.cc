@@ -1381,6 +1381,11 @@ LDLi* RandomPreconditioner::getLDLi(){
 }
 
 
+// NOTE: The stochasticity of this strategy can lead to non-deterministic
+// sizes in schur complements. For example, if a node with degree 1 is eliminated
+// there will be no nodes left for a clique to be formed. This might lead to
+// a slightly lower number of nodes than expected. Such issues can be addressed
+// using degree based elimination orders.
 Eigen::MatrixXd RandomPreconditioner::getSchurComplement(int t){
     PriorityMatrix* a = getPriorityMatrix();
     double n = a->n;
@@ -1409,6 +1414,7 @@ Eigen::MatrixXd RandomPreconditioner::getSchurComplement(int t){
         double wdeg = csum;
         double colScale = 1;
 
+        // std::cout << "Length of joffsets: " << len << std::endl;
         for(int joffset = 0; joffset < len-1; joffset++){
             PriorityElement* ll = colspace->at(joffset);
             double w = vals.at(joffset) * colScale;
