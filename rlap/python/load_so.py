@@ -34,5 +34,5 @@ def _load_librlap():
         sys.path.append(f)
 
 _load_librlap()
-print(sys.path)
+# print(sys.path)
 _pywrap_librlap = importlib.import_module("_librlap")

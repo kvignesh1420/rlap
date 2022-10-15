@@ -210,6 +210,7 @@ data/SNAP
 data/Planetoid
 data/ogb*
 data/CORA
+results/
 
 # third-party
 eigen-3.4.0/
