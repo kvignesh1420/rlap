@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import numpy as np
 
-def memory_table():
+def main():
     dir = "./results"
     files = []
     for (dirpath, dirnames, filenames) in os.walk(dir):
@@ -44,10 +44,6 @@ def memory_table():
     df = pd.DataFrame(table_entries)
     df = df.sort_values(["dataset"])
     print(df.to_latex(index=False, escape=False))
-
-def main():
-    memory_table()
-
 
 if __name__ == "__main__":
     main()

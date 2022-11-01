@@ -115,6 +115,10 @@ if __name__ == "__main__":
         "RandomWalkSubgraph": A.Compose([A.RWSampling(num_seeds=int(fraction*num_nodes), walk_length=10)]),
         "PPRDiffusion": A.Compose([A.PPRDiffusion(alpha=0.2, use_cache=False)]),
         "MarkovDiffusion": A.Compose([A.MarkovDiffusion(alpha=0.2, use_cache=False)]),
+        # For this combination, leverage the fact that we need same set of nodes across views.
+        # We can thus, significantly compress the size of 'x' being passed to PPR.
+        "rLap+PPRDiffusion": A.Compose([rLAP(int(fraction*num_nodes)), A.PPRDiffusion(alpha=0.2, use_cache=False)]),
+        "rLap+MarkovDiffusion": A.Compose([rLAP(int(fraction*num_nodes)), A.MarkovDiffusion(alpha=0.2, use_cache=False)]),
     }
     aug = augmentors[args.augmentor]
 
