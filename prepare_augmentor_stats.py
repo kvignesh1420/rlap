@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 
 def main():
-    dir = "./results"
+    dir = "./results/overheads"
     files = []
     for (dirpath, dirnames, filenames) in os.walk(dir):
         print(dirpath)
