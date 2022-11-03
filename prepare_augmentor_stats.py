@@ -42,7 +42,7 @@ def main():
         table_entries.append(entry)
 
     df = pd.DataFrame(table_entries)
-    df = df.sort_values(["dataset"])
+    df = df.sort_values(["dataset", "augmentor"])
     print(df.to_latex(index=False, escape=False))
 
 if __name__ == "__main__":

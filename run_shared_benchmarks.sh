@@ -3,7 +3,7 @@
 mkdir -p results/GRACE
 ARGS="EdgeAddition EdgeDropping EdgeDroppingDegree EdgeDroppingPR EdgeDroppingEVC NodeDropping RandomWalkSubgraph PPRDiffusion MarkovDiffusion rLap"
 DATASETS="CORA WIKI-CS COAUTHOR-CS COAUTHOR-PHY"
-NUM_LAYERS=(2 4 8 16)
+NUM_LAYERS=(2 4 8)
 LR=(0.01 0.001 0.0001)
 WD=(0.001 0.0001 0.00001)
 for aug in $ARGS
