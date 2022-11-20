@@ -166,24 +166,25 @@ Eigen::MatrixXd NaiveApproximateCholesky::getReconstructedLaplacian(){
 
 ApproximateCholesky::ApproximateCholesky(){}
 
-void ApproximateCholesky::setup(Eigen::MatrixXd edge_info, int nrows, int ncols, std::string pre){
+void ApproximateCholesky::setup(Eigen::MatrixXd edge_info, int nrows, int ncols, std::string o_v, std::string o_n){
     Reader* r = new EdgeInfoMatrixReader(edge_info, nrows, ncols);
     _A = r->Read();
     _L = this->computeLaplacian(_A);
-    _pre_str = pre;
+    _o_v_str = o_v;
+    _o_n_str = o_n;
     if (_prec != nullptr){
         delete _prec;
         _prec = nullptr;
     }
-    if(_pre_str == "order"){
+    if(_o_v_str == "order"){
         // TRACER("using OrderedPreconditioner\n");
         _prec = new OrderedPreconditioner(_A);
     }
-    else if(_pre_str == "random"){
+    else if(_o_v_str == "random"){
         // TRACER("using CoarseningPreconditioner\n");
-        _prec = new RandomPreconditioner(_A);
+        _prec = new RandomPreconditioner(_A, _o_n_str);
     }
-    else if(_pre_str == "coarsen"){
+    else if(_o_v_str == "coarsen"){
         // TRACER("using CoarseningPreconditioner\n");
         _prec = new CoarseningPreconditioner(_A);
     }
@@ -194,25 +195,28 @@ void ApproximateCholesky::setup(Eigen::MatrixXd edge_info, int nrows, int ncols,
     }
 }
 
-ApproximateCholesky::ApproximateCholesky(Eigen::SparseMatrix<double>* Adj, std::string pre){
+ApproximateCholesky::ApproximateCholesky(Eigen::SparseMatrix<double>* Adj, std::string o_v, std::string o_n){
     _A = Adj;
     _L = this->computeLaplacian(_A);
-    _pre_str = pre;
+    _o_v_str = o_v;
+    _o_n_str = o_n;
     this->compute();
 }
 
-ApproximateCholesky::ApproximateCholesky(Eigen::SparseMatrix<double> Adj, std::string pre){
+ApproximateCholesky::ApproximateCholesky(Eigen::SparseMatrix<double> Adj, std::string o_v, std::string o_n){
     _A = &Adj;
     _L = this->computeLaplacian(_A);
-    _pre_str = pre;
+    _o_v_str = o_v;
+    _o_n_str = o_n;
     this->compute();
 }
 
-ApproximateCholesky::ApproximateCholesky(std::string filename, int nrows, int ncols, std::string pre){
+ApproximateCholesky::ApproximateCholesky(std::string filename, int nrows, int ncols, std::string o_v, std::string o_n){
     Reader* r = new TSVReader(filename, nrows, ncols);
     _A = r->Read();
     _L = this->computeLaplacian(_A);
-    _pre_str = pre;
+    _o_v_str = o_v;
+    _o_n_str = o_n;
     this->compute();
 }
 
@@ -233,11 +237,11 @@ void ApproximateCholesky::compute(){
         delete _prec;
         _prec = nullptr;
     }
-    if(_pre_str == "order"){
+    if(_o_v_str == "order"){
         TRACER("using OrderedPreconditioner\n");
         _prec = new OrderedPreconditioner(_A);
     }
-    else if(_pre_str == "coarsen"){
+    else if(_o_v_str == "coarsen"){
         TRACER("using CoarseningPreconditioner\n");
         _prec = new CoarseningPreconditioner(_A);
     }

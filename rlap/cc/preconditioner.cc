@@ -975,6 +975,8 @@ Eigen::MatrixXd PriorityPreconditioner::getSchurComplement(int t){
     std::vector<Eigen::Vector3d> edge_info_vector;
     Eigen::MatrixXd edge_info;
 
+    // std::cout << "REMAINING ELEMENTS: " << pq->nitems << std::endl;
+    // std::cout << "PQ minlist: " << pq->minlist << std::endl;
     int edge_info_counter = 0;
     while (pq->nitems > 0){
         double i = DegreePQPop(pq);
@@ -1022,8 +1024,9 @@ Eigen::MatrixXd PriorityPreconditioner::getSchurComplement(int t){
 // RandomPreconditioner
 
 
-RandomPreconditioner::RandomPreconditioner(Eigen::SparseMatrix<double>* A){
+RandomPreconditioner::RandomPreconditioner(Eigen::SparseMatrix<double>* A, std::string o_n){
     _A = A;
+    _o_n_str = o_n;
 }
 
 std::vector<double> RandomPreconditioner::getFlipIndices(Eigen::SparseMatrix<double>* M){
@@ -1218,8 +1221,17 @@ double RandomPreconditioner::compressColumn(std::vector<PriorityElement*>* colsp
         }
     }
 
-    std::sort(colspace->begin(), colspace->begin()+ptr+1,
+    if (_o_n_str == "asc"){
+        std::sort(colspace->begin(), colspace->begin()+ptr+1,
          [](PriorityElement* j, PriorityElement* k) {return j->val < k->val; });
+    }
+    else if (_o_n_str == "desc"){
+        std::sort(colspace->begin(), colspace->begin()+ptr+1,
+         [](PriorityElement* j, PriorityElement* k) {return j->val > k->val; });
+    }
+    else if (_o_n_str == "random"){
+        std::random_shuffle ( colspace->begin(), colspace->begin()+ptr+1 );
+    }
     //  std::cout << "Compressed col to len = " << ptr+1 << std::endl;
     return ptr+1;
 }
@@ -1248,8 +1260,17 @@ double RandomPreconditioner::compressColumnSC(std::vector<PriorityElement*>* col
         }
     }
 
-    std::sort(colspace->begin(), colspace->begin()+ptr+1,
+    if (_o_n_str == "asc"){
+        std::sort(colspace->begin(), colspace->begin()+ptr+1,
          [](PriorityElement* j, PriorityElement* k) {return j->val < k->val; });
+    }
+    else if (_o_n_str == "desc"){
+        std::sort(colspace->begin(), colspace->begin()+ptr+1,
+         [](PriorityElement* j, PriorityElement* k) {return j->val > k->val; });
+    }
+    else if (_o_n_str == "random"){
+        std::random_shuffle ( colspace->begin(), colspace->begin()+ptr+1 );
+    }
     //  std::cout << "Compressed col to len = " << ptr+1 << std::endl;
     return ptr+1;
 }
@@ -1764,7 +1785,7 @@ Eigen::MatrixXd CoarseningPreconditioner::getSchurComplement(int t){
 
     std::vector<Eigen::Vector3d> edge_info_vector;
     Eigen::MatrixXd edge_info;
-
+    // std::cout << "REMAINING ELEMENTS: " << pq->nitems << std::endl;
     int edge_info_counter = 0;
     while (pq->nitems > 0){
         double i = DegreePQPop(pq);

@@ -104,13 +104,13 @@ class ApproximateCholesky: public Factorizer{
     // adjacency matrix and configure the state on demand via the `setup` method.
     ApproximateCholesky();
     // approximate cholesky factorization from the ground up
-    ApproximateCholesky(Eigen::SparseMatrix<double>* Adj, std::string pre = "degree");
-    ApproximateCholesky(Eigen::SparseMatrix<double> Adj, std::string pre = "degree");
+    ApproximateCholesky(Eigen::SparseMatrix<double>* Adj, std::string o_v = "degree",  std::string o_n = "asc");
+    ApproximateCholesky(Eigen::SparseMatrix<double> Adj, std::string o_v = "degree",  std::string o_n = "asc");
     // A constructor which enables the user to just pass the
     // tsv/csv file for the adjacency matrix of the graph.
     // This reduces the overhead of copying scipy csc matrices
     // from the python layer to the c++ layer.
-    ApproximateCholesky(std::string filename, int nrows, int ncols, std::string pre = "degree");
+    ApproximateCholesky(std::string filename, int nrows, int ncols, std::string o_v = "degree",  std::string o_n = "asc");
     ~ApproximateCholesky(){
       delete _prec;
       delete _ldli;
@@ -118,7 +118,7 @@ class ApproximateCholesky: public Factorizer{
       delete _L;
     };
     // setup the adjacency matrix via the edge info and other params;
-    void setup(Eigen::MatrixXd edge_info, int nrows, int ncols, std::string pre = "degree");
+    void setup(Eigen::MatrixXd edge_info, int nrows, int ncols, std::string o_v = "degree",  std::string o_n = "asc");
     // retrieve the adjancency matrix. helpful if factorizer was
     // initialized with a filename and dimension
     Eigen::SparseMatrix<double> getAdjacencyMatrix();
@@ -142,7 +142,8 @@ class ApproximateCholesky: public Factorizer{
     Eigen::SparseMatrix<double>* _A = nullptr;
     Eigen::SparseMatrix<double>* _L = nullptr;
     LDLi* _ldli = nullptr;
-    std::string _pre_str;
+    std::string _o_v_str;
+    std::string _o_n_str;
     int _num_iters = 0;
     Preconditioner* _prec = nullptr;
 };

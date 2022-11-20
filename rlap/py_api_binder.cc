@@ -13,9 +13,9 @@ PYBIND11_MODULE(_librlap, m){
     // runtime cost as a __dict__ is now added to this python class, and the garbage
     // collection becomes a bit expensive.
     py::class_<ApproximateCholesky, Factorizer>(m, "ApproximateCholesky", py::dynamic_attr())
-        // .def(py::init<std::string, int, int, std::string>(), py::arg("filename"), py::arg("nrows"), py::arg("ncols"), py::arg("pre"))
+        // .def(py::init<std::string, int, int, std::string>(), py::arg("filename"), py::arg("nrows"), py::arg("ncols"), py::arg("o_v"))
         .def(py::init<>())
-        .def("setup", &ApproximateCholesky::setup, py::arg("edge_info"), py::arg("nrows"), py::arg("ncols"), py::arg("pre"),
+        .def("setup", &ApproximateCholesky::setup, py::arg("edge_info"), py::arg("nrows"), py::arg("ncols"), py::arg("o_v"), py::arg("o_n"),
             "setup the edge_info matrix and precondition the laplacian")
         .def("get_laplacian", &ApproximateCholesky::getLaplacian,
             "get the computed Laplacian")

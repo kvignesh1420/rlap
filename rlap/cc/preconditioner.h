@@ -56,7 +56,7 @@ class PriorityPreconditioner : public Preconditioner{
 
 class RandomPreconditioner : public Preconditioner{
   public:
-    RandomPreconditioner(Eigen::SparseMatrix<double>* A);
+    RandomPreconditioner(Eigen::SparseMatrix<double>* A, std::string o_n);
     ~RandomPreconditioner(){};
     LDLi* getLDLi() override;
     Eigen::MatrixXd getSchurComplement(int t) override;
@@ -74,6 +74,7 @@ class RandomPreconditioner : public Preconditioner{
 
   private:
     Eigen::SparseMatrix<double>* _A;
+    std::string _o_n_str;
 };
 
 class CoarseningPreconditioner : public PriorityPreconditioner{
