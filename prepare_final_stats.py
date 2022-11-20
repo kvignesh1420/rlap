@@ -42,7 +42,7 @@ def main():
                             f1mi_scores.append(float(match["f1mi"])*100)
                             f1ma_scores.append(float(match["f1ma"])*100)
                             acc_scores.append(float(match["acc"])*100)
-                            print(match)
+                            # print(match)
 
                     table_entries.append({
                             "augmentor": aug_name,
@@ -58,10 +58,11 @@ def main():
                         })
 
             df = pd.DataFrame(table_entries)
-            df = df.sort_values(["dataset", "augmentor"])
+            df = df.sort_values(["dataset", "mode", "augmentor"])
             print(df.to_latex(index=False, escape=False))
 
+
 if __name__ == "__main__":
-    frameworks = ["shared"]
-    tasks = ["node"]
+    frameworks = ["shared", "dedicated"]
+    tasks = ["node", "graph"]
     main()
