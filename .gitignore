@@ -211,6 +211,7 @@ data/Planetoid
 data/ogb*
 data/CORA
 results/
+reviews/
 
 # third-party
 eigen-3.4.0/
@@ -219,3 +220,4 @@ eigen-3.4.0/
 bazel-*
 .clwb/
 .idea/
+plots/
