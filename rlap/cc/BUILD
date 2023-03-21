@@ -10,15 +10,6 @@ cc_library(
 )
 
 cc_library(
-    name = "samplers",
-    srcs = ["samplers.cc"],
-    hdrs = ["samplers.h"],
-    deps = [
-        "//third_party/eigen3"
-    ]
-)
-
-cc_library(
     name = "reader",
     srcs = ["reader.cc"],
     hdrs = ["reader.h"],
@@ -34,22 +25,8 @@ cc_library(
     hdrs = ["factorizers.h"],
     deps = [
         ":types",
-        ":samplers",
-        ":cg",
         ":reader",
         ":preconditioner",
-        ":tracer",
-        "//third_party/eigen3"
-    ],
-    visibility = ["//visibility:public"]
-)
-
-cc_library(
-    name = "cg",
-    srcs = ["cg.cc"],
-    hdrs = ["cg.h"],
-    deps = [
-        ":types",
         ":tracer",
         "//third_party/eigen3"
     ],
@@ -67,4 +44,3 @@ cc_library(
     ],
     visibility = ["//visibility:public"]
 )
-

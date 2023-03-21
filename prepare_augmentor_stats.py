@@ -27,7 +27,6 @@ def main_cpu():
                 if "aug(" in line:
                     tokens = line.split(" ")
                     tokens = [tok for tok in tokens if tok!=""]
-                    # print(aug_name, dataset_name, tokens)
                     mem_usage.append(float(tokens[3]))
                 if "DURATION" in line:
                     tokens = line.split(" ")

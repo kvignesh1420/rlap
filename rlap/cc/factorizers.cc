@@ -7,8 +7,6 @@
 #include <functional>
 #include <random>
 #include "factorizers.h"
-#include "samplers.h"
-#include "cg.h"
 #include "reader.h"
 #include "preconditioner.h"
 #include "tracer.h"
@@ -28,7 +26,6 @@ Eigen::SparseMatrix<double>* Factorizer::computeLaplacian(Eigen::SparseMatrix<do
     }
     D->makeCompressed();
     *L = *D - *Adj;
-    // std::cout << "Laplacian outer size:" << L->outerSize() << std::endl;
     // check symmetry of the laplacian
     Eigen::SparseMatrix<double> L_t = L->transpose();
     if((*L - L_t ).norm() != 0){
@@ -37,129 +34,6 @@ Eigen::SparseMatrix<double>* Factorizer::computeLaplacian(Eigen::SparseMatrix<do
     }
     delete D;
     return L;
-}
-
-// EigenCholeskyLLT
-
-EigenCholeskyLLT::EigenCholeskyLLT(Eigen::SparseMatrix<double>* Adj){
-    _L = this->computeLaplacian(Adj);
-}
-
-void EigenCholeskyLLT::compute(){
-    _llt = new Eigen::LLT<Eigen::MatrixXd>(*_L);
-}
-
-Eigen::SparseMatrix<double> EigenCholeskyLLT::getLaplacian(){
-    return *_L;
-}
-
-Eigen::MatrixXd EigenCholeskyLLT::getReconstructedLaplacian(){
-    return _llt->reconstructedMatrix();
-}
-
-// EigenCholeskyLDLT
-
-EigenCholeskyLDLT::EigenCholeskyLDLT(Eigen::SparseMatrix<double>* Adj){
-    _L = this->computeLaplacian(Adj);
-}
-
-void EigenCholeskyLDLT::compute(){
-    _ldlt = new Eigen::LDLT<Eigen::MatrixXd>(*_L);
-}
-
-Eigen::SparseMatrix<double> EigenCholeskyLDLT::getLaplacian(){
-    return *_L;
-}
-
-Eigen::MatrixXd EigenCholeskyLDLT::getReconstructedLaplacian(){
-    return _ldlt->reconstructedMatrix();
-}
-
-// ClassicCholesky
-
-ClassicCholesky::ClassicCholesky(Eigen::SparseMatrix<double>* Adj){
-    _L = this->computeLaplacian(Adj);
-}
-
-void ClassicCholesky::compute(){
-    _G = new Eigen::SparseMatrix<double>(_L->outerSize(), _L->outerSize());
-    // _G = new Eigen::MatrixXd(_L.outerSize(), _L.outerSize());
-    Eigen::SparseMatrix<double> L = *_L;
-    for(int i = 0; i < L.outerSize()-1; i++){
-        // NOTE: The condition is an inequality instead of a strict equality to 0 to prevent
-        // numerical instability
-        if(L.coeff(i,i) >= 0.00000001){
-            _G->col(i) = L.col(i)/std::sqrt(L.coeff(i,i));
-            L = L - L.col(i) * (L.row(i) / L.coeff(i,i));
-        }
-    }
-}
-
-Eigen::SparseMatrix<double> ClassicCholesky::getLaplacian(){
-    return *_L;
-}
-
-Eigen::MatrixXd ClassicCholesky::getReconstructedLaplacian(){
-    return (*_G) * (_G->transpose());
-}
-
-Eigen::SparseMatrix<double> ClassicCholesky::getLower(){
-    return (*_G);
-}
-
-// NaiveApproximateCholesky
-
-NaiveApproximateCholesky::NaiveApproximateCholesky(Eigen::SparseMatrix<double>* Adj){
-    _A = Adj;
-    _L = this->computeLaplacian(Adj);
-}
-
-void NaiveApproximateCholesky::compute(){
-    _G = new Eigen::SparseMatrix<double>(_L->outerSize(), _L->outerSize());
-    // _G = new Eigen::MatrixXd(_L.outerSize(), _L.outerSize());
-    Eigen::SparseMatrix<double> L = *_L;
-    CliqueSampler* sampler = new WeightedCliqueSampler();
-    for(int i = 0; i < L.outerSize()-1; i++){
-        // NOTE: The condition is an inequality instead of a strict equality to 0 to prevent
-        // numerical instability
-        if(L.coeff(i,i) >= 1e-8){
-            _G->col(i) = L.col(i)/std::sqrt(L.coeff(i,i));
-            Eigen::SparseMatrix<double> star = *getStar(&L, i);
-            Eigen::MatrixXd approx_clique = sampler->sampleClique(L, i);
-            // Eigen::MatrixXd exact_clique = star - L.col(i)*(L.row(i)/L.coeff(i,i));
-
-            // std::cout << "Exact - approx clique = " << (exact_clique - approx_clique).norm() << std::endl;
-            L = L - star + approx_clique;
-        }
-    }
-}
-
-
-Eigen::SparseMatrix<double>* NaiveApproximateCholesky::getStar(Eigen::SparseMatrix<double>* L, int i){
-
-    Eigen::SparseMatrix<double> E_i(L->rows(), L->cols());
-    E_i.reserve(Eigen::VectorXi::Constant(L->cols(), 2));
-    for(int j = 0; j < L->cols(); j++){
-        if(_L->coeff(i, j) != 0 && i!=j){
-            double w = L->coeff(i, j);
-            double sign = w > 0 ? 1.0 : -1.0;
-            E_i.insert(i, j) = 1 * -sign * std::sqrt(std::abs(L->coeff(i, j)));
-            E_i.insert(j, j) = -1 * std::sqrt(std::abs(L->coeff(i, j)));
-        }
-    }
-    E_i.makeCompressed();
-    Eigen::SparseMatrix<double>* star_i = new Eigen::SparseMatrix<double>(L->rows(), L->cols());
-    *star_i = E_i * E_i.transpose();
-
-    return star_i;
-}
-
-Eigen::SparseMatrix<double> NaiveApproximateCholesky::getLaplacian(){
-    return *_L;
-}
-
-Eigen::MatrixXd NaiveApproximateCholesky::getReconstructedLaplacian(){
-    return (*_G) * (_G->transpose());
 }
 
 // ApproximateCholesky
@@ -177,43 +51,14 @@ void ApproximateCholesky::setup(Eigen::MatrixXd edge_info, int nrows, int ncols,
         _prec = nullptr;
     }
     if(_o_v_str == "random"){
-        // TRACER("using CoarseningPreconditioner\n");
         _prec = new RandomPreconditioner(_A, _o_n_str);
     }
+    else if(_o_v_str == "degree"){
+        _prec = new PriorityPreconditioner(_A, _o_n_str);
+    }
     else if(_o_v_str == "coarsen"){
-        // TRACER("using CoarseningPreconditioner\n");
         _prec = new CoarseningPreconditioner(_A);
     }
-    else{
-        // default option
-        // TRACER("using PriorityPreconditioner\n");
-        _prec = new PriorityPreconditioner(_A);
-    }
-}
-
-ApproximateCholesky::ApproximateCholesky(Eigen::SparseMatrix<double>* Adj, std::string o_v, std::string o_n){
-    _A = Adj;
-    _L = this->computeLaplacian(_A);
-    _o_v_str = o_v;
-    _o_n_str = o_n;
-    this->compute();
-}
-
-ApproximateCholesky::ApproximateCholesky(Eigen::SparseMatrix<double> Adj, std::string o_v, std::string o_n){
-    _A = &Adj;
-    _L = this->computeLaplacian(_A);
-    _o_v_str = o_v;
-    _o_n_str = o_n;
-    this->compute();
-}
-
-ApproximateCholesky::ApproximateCholesky(std::string filename, int nrows, int ncols, std::string o_v, std::string o_n){
-    Reader* r = new TSVReader(filename, nrows, ncols);
-    _A = r->Read();
-    _L = this->computeLaplacian(_A);
-    _o_v_str = o_v;
-    _o_n_str = o_n;
-    this->compute();
 }
 
 Eigen::SparseMatrix<double> ApproximateCholesky::getAdjacencyMatrix(){
@@ -267,6 +112,9 @@ Eigen::SparseMatrix<double> ApproximateCholesky::getLaplacian(){
 }
 
 Eigen::MatrixXd ApproximateCholesky::getReconstructedLaplacian(){
-    // TODO(kvignesh1420): Placeholder method for linking
     return *_L;
+}
+
+Eigen::MatrixXd ApproximateCholesky::getSchurComplement(int t){
+    return _prec->getSchurComplement(t);
 }

@@ -1,6 +1,5 @@
 """
 _librlap.so loader for importing into python.
-referenced from: https://github.com/tensorflow/io/blob/master/tensorflow_io/python/ops/__init__.py
 """
 import os
 import ctypes

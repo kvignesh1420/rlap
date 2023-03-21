@@ -17,15 +17,6 @@ PYBIND11_MODULE(_librlap, m){
         .def(py::init<>())
         .def("setup", &ApproximateCholesky::setup, py::arg("edge_info"), py::arg("nrows"), py::arg("ncols"), py::arg("o_v"), py::arg("o_n"),
             "setup the edge_info matrix and precondition the laplacian")
-        .def("get_laplacian", &ApproximateCholesky::getLaplacian,
-            "get the computed Laplacian")
-        .def("solve", &ApproximateCholesky::solve, py::arg("b"),
-            "solve the linear system of Lx = b, where L is the Laplacian"
-            "computed from the adjacency matrix")
-        .def("get_num_iters", &ApproximateCholesky::getNumIters,
-            "return the number of iteration by pcg solver.")
-        .def("get_sparsity_ratio", &ApproximateCholesky::getSparsityRatio,
-            "return the ratio of number of preconditioned egdes to original edges.")
         .def("get_schur_complement", &ApproximateCholesky::getSchurComplement, py::arg("t"),
             "retrieve the schur complement after eliminating 't' vertices")
         .def("__repr__", 

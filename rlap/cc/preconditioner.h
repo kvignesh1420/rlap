@@ -7,16 +7,14 @@
 
 class Preconditioner{
   public:
-    virtual LDLi* getLDLi() = 0;
     virtual Eigen::MatrixXd getSchurComplement(int t) = 0;
     virtual ~Preconditioner() = default;
 };
 
 class PriorityPreconditioner : public Preconditioner{
   public:
-    PriorityPreconditioner(Eigen::SparseMatrix<double>* A);
+    PriorityPreconditioner(Eigen::SparseMatrix<double>* A, std::string o_n);
     ~PriorityPreconditioner(){};
-    LDLi* getLDLi() override;
     Eigen::MatrixXd getSchurComplement(int t) override;
 
   protected:
@@ -35,13 +33,13 @@ class PriorityPreconditioner : public Preconditioner{
 
   private:
     Eigen::SparseMatrix<double>* _A;
+    std::string _o_n_str;
 };
 
 class RandomPreconditioner : public Preconditioner{
   public:
     RandomPreconditioner(Eigen::SparseMatrix<double>* A, std::string o_n);
     ~RandomPreconditioner(){};
-    LDLi* getLDLi() override;
     Eigen::MatrixXd getSchurComplement(int t) override;
 
   protected:
@@ -64,7 +62,6 @@ class CoarseningPreconditioner : public PriorityPreconditioner{
   public:
     CoarseningPreconditioner(Eigen::SparseMatrix<double>* A);
     ~CoarseningPreconditioner(){};
-    LDLi* getLDLi() override;
     Eigen::MatrixXd getSchurComplement(int t) override;
   private:
     Eigen::SparseMatrix<double>* _A;

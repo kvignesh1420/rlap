@@ -3,11 +3,6 @@
 
 #include <vector>
 
-// double precision is used for Eigen matrices due to it's high precision and
-// enables pcg to converge quickly.
-// For instance, when using Xf in Eigen with grid graph of 1e6 x 1e6, pcg converged
-// in around ~385 iterations, however when using Xd, it converged in ~22 iterations due
-// to increased precision.
 
 typedef struct PriorityElement{
     // Represents an element of a matrix along with the
@@ -136,82 +131,5 @@ typedef struct RandomPQ{
     double nitems;
 
 } RandomPQ;
-
-
-typedef struct OrderedElement{
-    // Represents an element of a matrix along with the
-    // information about the order in which it appears in
-    // it's column. The operations pertaining to this struct
-    // are optimized for sparse matrices with compressed column storage.
-
-    // represents the row number of the nnz element
-    double row;
-
-    // points to the next nnz element in the column
-    double next;
-
-    // the nnz value of the element
-    double val;
-} OrderedElement;
-
-typedef struct OrderedMatrix{
-    // Represents a given matrix in a column major order
-    // by maintaining a vector of OrderedElement's and the
-    // corresponding vector which maintains the indices of
-    // OrderedElement's where a particular column starts.
-
-    // number of columns
-    double n;
-
-    // a vector to maintain the indices of
-    // OrderedElement's where a particular column starts.
-    std::vector<double> cols;
-
-    // a vector to maintain the OrderedElemnts of the matrix
-    std::vector<OrderedElement*> elements;
-} OrderedMatrix;
-
-typedef struct ColumnElement{
-    // Represents an element of a particular column when
-    // dealing with the column in it's entirety instead of
-    // the matrix itself.
-
-    // NOTE: Since each OrderedElement represents an edge in the
-    // graph between vertices, this struct enables us to compress
-    // those multi-edges into a single edge and store as a
-    // ColumnElement for column processing.
-
-     // represents the row number of the nnz element
-    double row;
-
-    // points to the next nnz element in the column
-    double ptr;
-
-    // the nnz value of the element
-    double val;
-} ColumnElement;
-
-typedef struct LDLi{
-    // Represents the preconditioner pertaining to the
-    // L * D * L^-1 operation while solving the linear system of
-    // equations.
-
-    // a vector of column numbers
-    std::vector<double> col;
-
-    // a vector to represent where in `rowval`,
-    // a particular column starts.
-    std::vector<double> colptr;
-
-    // a vector of row numbers of nnz values
-    std::vector<double> rowval;
-
-    // the fractional weight of a particular edge
-    // for approximating a clique.
-    std::vector<double> fval;
-
-    // a vector of diagonal elements of D
-    std::vector<double> d;
-} LDLi;
 
 #endif

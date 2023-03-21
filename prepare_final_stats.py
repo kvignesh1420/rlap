@@ -23,7 +23,6 @@ def main():
             grok = Grok(pattern)
             for filepath in filepaths:
                 name = filepath.split("/")[-1].replace(".txt", "")
-                # print(name.split("-"))
                 aug_name = name.split("-")[0]
                 mode = name.split("-")[-1]
                 dims = int(name.split("-")[-2]) 
@@ -42,7 +41,6 @@ def main():
                             f1mi_scores.append(float(match["f1mi"])*100)
                             f1ma_scores.append(float(match["f1ma"])*100)
                             acc_scores.append(float(match["acc"])*100)
-                            # print(match)
 
                     table_entries.append({
                             "augmentor": aug_name,

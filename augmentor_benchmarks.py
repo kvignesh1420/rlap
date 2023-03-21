@@ -4,21 +4,22 @@ Benchmark the resource consumption of graph augmentors.
 
 import time
 import argparse
-from memory_profiler import memory_usage, profile
+from memory_profiler import profile
 import torch
 import os.path as osp
 import GCL.losses as L
 import GCL.augmentors as A
 from GCL.augmentors.augmentor import Graph, Augmentor
+from GCL.augmentors.functional import compute_ppr
 import torch.nn.functional as F
 import torch_geometric.transforms as T
-from torch_geometric.utils import sort_edge_index, degree, to_networkx, to_undirected
+from torch_geometric.utils import sort_edge_index, degree, to_networkx, to_undirected, subgraph
 from torch_geometric.data import Data
+from torch_geometric.data import DataLoader
 from torch_sparse import coalesce
 from torch_scatter import scatter
 import networkx as nx
-
-from torch_geometric.datasets import Planetoid, Coauthor, WikiCS, SNAPDataset, TUDataset
+from torch_geometric.datasets import Planetoid, Coauthor, TUDataset, Amazon
 import numpy as np
 from rlap import ApproximateCholesky
 
@@ -53,28 +54,107 @@ class EdgeAdding(Augmentor):
 
 
 class rLap(A.Augmentor):
-    def __init__(self, t):
+    def __init__(self, frac, o_v="random", o_n="asc"):
         super(rLap, self).__init__()
-        self.t = t
-    
+        self.frac = frac
+        self.o_v = o_v
+        self.o_n = o_n
+
     def augment(self, g):
         x, edge_index, edge_weights = g.unfold()
         num_nodes = edge_index.max().item() + 1
+        self.t = int(self.frac * num_nodes)
         _edge_weights = edge_weights
         if _edge_weights is None:
             edge_weights = torch.ones((1, edge_index.shape[1])).to(edge_index.device)
         edge_info = torch.concat((edge_index, edge_weights), dim=0).t()
         ac = ApproximateCholesky()
-        ac.setup(edge_info.to("cpu"), num_nodes, num_nodes, "random")
+        ac.setup(edge_info=edge_info.to("cpu"), nrows=num_nodes, ncols=num_nodes, o_v=self.o_v, o_n=self.o_n)
+        sparse_edge_info = ac.get_schur_complement(self.t)
+        sampled_edge_index = torch.Tensor(sparse_edge_info[:,:2]).long().t().to(edge_index.device)
+        # sampled_edge_weights = torch.Tensor(sparse_edge_info[:,-1]).t().to(edge_index.device)
+        del ac
+        del sparse_edge_info
+        return A.Graph(x=x, edge_index=sampled_edge_index, edge_weights=None)
+
+
+class rLapPPRDiffusion(A.Augmentor):
+    def __init__(self, frac, o_v="random", o_n="asc", alpha = 0.2, eps = 1e-4,
+                 use_cache = True, refresh_cache_freq = 50):
+        super(rLapPPRDiffusion, self).__init__()
+        self.frac = frac
+        self.o_v = o_v
+        self.o_n = o_n
+        self.alpha = alpha
+        self.eps = eps
+        self._cache = None
+        self.use_cache = use_cache
+        self.refresh_cache_freq = refresh_cache_freq
+        self.refresh_cache_counter = 0
+
+    def augment(self, g):
+        if self._cache is not None and self.use_cache and self.refresh_cache_counter < self.refresh_cache_freq:
+            self.refresh_cache_counter += 1
+            return self._cache
+        x, edge_index, edge_weights = g.unfold()
+        num_nodes = edge_index.max().item() + 1
+        self.t = int(self.frac * num_nodes)
+        _edge_weights = edge_weights
+        if _edge_weights is None:
+            edge_weights = torch.ones((1, edge_index.shape[1])).to(edge_index.device)
+        edge_info = torch.concat((edge_index, edge_weights), dim=0).t()
+        ac = ApproximateCholesky()
+        ac.setup(edge_info=edge_info.to("cpu"), nrows=num_nodes, ncols=num_nodes, o_v=self.o_v, o_n=self.o_n)
         sparse_edge_info = ac.get_schur_complement(self.t)
         sampled_edge_index = torch.Tensor(sparse_edge_info[:,:2]).long().t().to(edge_index.device)
         sampled_edge_weights = torch.Tensor(sparse_edge_info[:,-1]).t().to(edge_index.device)
         del ac
         del sparse_edge_info
-        return A.Graph(x=x, edge_index=sampled_edge_index, edge_weights=sampled_edge_weights)
+        sc_subgraph_nodes = torch.unique(sampled_edge_index, sorted=True)
+        sc_subgraph_edge_index, sc_subgraph_edge_weights = subgraph(subset=sc_subgraph_nodes, edge_index=sampled_edge_index,
+                               edge_attr=sampled_edge_weights, relabel_nodes=True)
 
-# Adaptive Augmentors from (GCA):
-# https://github.com/CRIPAC-DIG/GCA
+        diffused_edge_index, diffused_edge_weights = compute_ppr(
+            sc_subgraph_edge_index, sc_subgraph_edge_weights,
+            alpha=self.alpha, eps=self.eps, ignore_edge_attr=False, add_self_loop=False
+        )
+        diffused_edge_index = sc_subgraph_nodes[diffused_edge_index]
+        res = A.Graph(x=x, edge_index=diffused_edge_index, edge_weights=diffused_edge_weights)
+        self._cache = res
+        self.refresh_cache_counter = 0
+        return res
+
+
+class PPRDiffusionSubGraph(Augmentor):
+    def __init__(self, alpha: float = 0.2, eps: float = 1e-4, use_cache: bool = True, add_self_loop: bool = True, sub_graph_size=8192):
+        super(PPRDiffusionSubGraph, self).__init__()
+        self.alpha = alpha
+        self.eps = eps
+        self._cache = None
+        self.use_cache = use_cache
+        self.add_self_loop = add_self_loop
+        self.sub_graph_size = sub_graph_size
+
+    def augment(self, g: Graph) -> Graph:
+        if self._cache is not None and self.use_cache:
+            return self._cache
+        x, edge_index, edge_weights = g.unfold()
+        edge_index, edge_weights = compute_ppr(
+            edge_index, edge_weights,
+            alpha=self.alpha, eps=self.eps, ignore_edge_attr=False, add_self_loop=self.add_self_loop
+        )
+
+        node_indices = torch.unique(edge_index)
+        num_nodes = node_indices.shape[0]
+        perm = torch.randperm(num_nodes)
+        node_indices = node_indices[perm]
+        batch_nodes = node_indices[ :self.sub_graph_size]
+
+        edge_index, edge_weights = subgraph(batch_nodes, edge_index, edge_weights)
+        res = Graph(x=x, edge_index=edge_index, edge_weights=edge_weights)
+        self._cache = res
+        return res
+
 
 
 def compute_pr(edge_index, damp: float = 0.85, k: int = 10):
@@ -92,7 +172,7 @@ def compute_pr(edge_index, damp: float = 0.85, k: int = 10):
 
 def eigenvector_centrality(data):
     graph = to_networkx(data)
-    x = nx.eigenvector_centrality_numpy(graph)
+    x = nx.eigenvector_centrality_numpy(graph, tol=1e-05)
     x = [x[i] for i in range(data.num_nodes)]
     return torch.tensor(x, dtype=torch.float32).to(data.edge_index.device)
 
@@ -198,7 +278,8 @@ class EdgeDroppingEVC(A.Augmentor):
 
     def augment(self, g):
         x, edge_index, edge_weights = g.unfold()
-        data = Data(x=x, edge_index=edge_index, edge_weights=edge_weights)
+        device = torch.device('cuda')
+        data = Data(x=x, edge_index=edge_index, edge_weights=edge_weights).to(device)
         drop_weights = evc_drop_weights(data=data)
         mask = drop_edge_weighted(
             edge_index=edge_index,
@@ -213,54 +294,89 @@ class EdgeDroppingEVC(A.Augmentor):
 
 
 @profile()
-def benchmark_memory(aug, data):
+def benchmark_node_memory(aug, data):
     aug(data.x, data.edge_index, data.edge_weight)
 
-def benchmark_latency(aug, data):
+def benchmark_node_latency(aug, data):
     start = time.time()
     aug(data.x, data.edge_index, data.edge_weight)
     end = time.time()
     print("\nDURATION: {} sec\n".format(end-start))
 
+@profile()
+def benchmark_graph_memory(aug, dataloader):
+    for data in dataloader:
+        data = data.to(device)
+        aug(data.x, data.edge_index, data.edge_weight)
+
+def benchmark_graph_latency(aug, dataloader):
+    duration = 0
+    for data in dataloader:
+        data = data.to(device)
+        start = time.time()
+        aug(data.x, data.edge_index, data.edge_weight)
+        end = time.time()
+        duration += end-start
+    print("\nDURATION: {} sec\n".format(duration))
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('task', type=str)
     parser.add_argument('augmentor', type=str)
     parser.add_argument('dataset', type=str)
+    parser.add_argument('device', type=str)
     args = parser.parse_args()
     print(args)
 
-    device = torch.device('cpu')
+    device = torch.device(args.device)
     path = osp.join(osp.expanduser('~'), 'datasets')
     datasets = {
+        # node
         "CORA": lambda: Planetoid(path, name='Cora', transform=T.NormalizeFeatures()),
-        "WIKI-CS": lambda: WikiCS(path, transform=T.NormalizeFeatures()),
+        "AMAZON-PHOTO": lambda: Amazon(path, name='Photo', transform=T.NormalizeFeatures()),
+        "PUBMED": lambda: Planetoid(path, name='PubMed', transform=T.NormalizeFeatures()),
         "COAUTHOR-CS": lambda: Coauthor(path, name="CS", transform=T.NormalizeFeatures()),
         "COAUTHOR-PHY": lambda: Coauthor(path, name="Physics", transform=T.NormalizeFeatures()),
+        # graph
+        "PROTEINS": lambda: TUDataset(path, name='PROTEINS_full'),
+        "IMDB-BINARY": lambda: TUDataset(path, name='IMDB-BINARY'),
+        "IMDB-MULTI": lambda: TUDataset(path, name='IMDB-MULTI'),
+        "MUTAG": lambda: TUDataset(path, name='MUTAG'),
+        "NCI1": lambda: TUDataset(path, name='NCI1'),
     }
 
-    dataset = datasets[args.dataset]()
-    data = dataset[0].to(device)
-    num_nodes = data.edge_index.max().item() + 1
     fraction = 0.5
+    dataset = datasets[args.dataset]()
+    if args.task == "graph":
+        dataloader = DataLoader(dataset, batch_size=128)
+        num_seeds = 1000
+    elif args.task == "node":
+        data = dataset[0].to(device)
+        num_nodes = data.edge_index.max().item() + 1
+        num_seeds = int(fraction*num_nodes)
+
     usages = {}
     augmentors = {
-        "rLap": A.Compose([rLap(int(fraction*num_nodes))]),
-        "EdgeAddition": A.Compose([EdgeAdding(pe=0.5)]),
-        "EdgeDropping": A.Compose([A.EdgeRemoving(pe=0.5)]),
-        "EdgeDroppingDegree": A.Compose([EdgeDroppingDegree(p=0.5, threshold=0.7)]),
-        "EdgeDroppingPR": A.Compose([EdgeDroppingPR(p=0.5, threshold=0.7)]),
-        "EdgeDroppingEVC": A.Compose([EdgeDroppingEVC(p=0.5, threshold=0.7)]),
-        "NodeDropping": A.Compose([A.NodeDropping(pn=0.5)]),
-        "RandomWalkSubgraph": A.Compose([A.RWSampling(num_seeds=int(fraction*num_nodes), walk_length=10)]),
+        "rLap": A.Compose([rLap(fraction)]),
+        "EdgeAddition": A.Compose([EdgeAdding(pe=fraction)]),
+        "EdgeDropping": A.Compose([A.EdgeRemoving(pe=fraction)]),
+        "EdgeDroppingDegree": A.Compose([EdgeDroppingDegree(p=fraction, threshold=0.7)]),
+        "EdgeDroppingPR": A.Compose([EdgeDroppingPR(p=fraction, threshold=0.7)]),
+        "EdgeDroppingEVC": A.Compose([EdgeDroppingEVC(p=fraction, threshold=0.7)]),
+        "NodeDropping": A.Compose([A.NodeDropping(pn=fraction)]),
+        "RandomWalkSubgraph": A.Compose([A.RWSampling(num_seeds=num_seeds, walk_length=10)]),
         "PPRDiffusion": A.Compose([A.PPRDiffusion(alpha=0.2, use_cache=False)]),
         "MarkovDiffusion": A.Compose([A.MarkovDiffusion(alpha=0.2, use_cache=False)]),
-        # For this combination, leverage the fact that we need same set of nodes across views.
-        # We can thus, significantly compress the size of 'x' being passed to PPR.
-        "rLap+PPRDiffusion": A.Compose([rLap(int(fraction*num_nodes)), A.PPRDiffusion(alpha=0.2, use_cache=False)]),
-        "rLap+MarkovDiffusion": A.Compose([rLap(int(fraction*num_nodes)), A.MarkovDiffusion(alpha=0.2, use_cache=False)]),
     }
     aug = augmentors[args.augmentor]
 
-    benchmark_memory(aug, data)
-    benchmark_latency(aug, data)
+    if args.task == "node":
+        if args.device == "cpu":
+            benchmark_node_memory(aug, data)
+        benchmark_node_latency(aug, data)
+
+    if args.task == "graph":
+        if args.device == "cpu":
+            benchmark_graph_memory(aug, dataloader)
+        benchmark_graph_latency(aug, dataloader)
