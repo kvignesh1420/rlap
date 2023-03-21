@@ -83,6 +83,15 @@ def mask_edge(graph, mask_prob):
     return mask_idx
 
 
+def add_edge(edge_index, ratio):
+    num_edges = edge_index.size()[1]
+    num_nodes = edge_index.max().item() + 1
+    num_add = int(num_edges * ratio)
+
+    new_edge_index = th.randint(0, num_nodes - 1, size=(2, num_add)).to(edge_index.device)
+    edge_index = th.cat([edge_index, new_edge_index], dim=1)
+    return edge_index
+
 def ea_aug(graph, x, feat_drop_rate, frac):
     n_node = graph.number_of_nodes()
 
@@ -93,7 +102,7 @@ def ea_aug(graph, x, feat_drop_rate, frac):
     src = graph.edges()[0]
     dst = graph.edges()[1]
     edge_index = th.cat((src.unsqueeze(0), dst.unsqueeze(0)), dim=0)
-    new_edge_index = functional.add_edge(edge_index=edge_index, ratio=frac)
+    new_edge_index = add_edge(edge_index=edge_index, ratio=frac)
     nsrc = new_edge_index[0]
     ndst = new_edge_index[1]
     ng.add_edges(nsrc, ndst)
@@ -125,7 +134,7 @@ def markovd_aug(graph, x, feat_drop_rate, frac):
     edge_index = th.cat((src.unsqueeze(0), dst.unsqueeze(0)), dim=0)
 
     new_edge_index, _ =  functional.compute_markov_diffusion(
-            edge_index, None, alpha=0.2
+            edge_index, None, alpha=0.2, degree=16, sp_eps=1e-4
     )
     nsrc = new_edge_index[0]
     ndst = new_edge_index[1]
@@ -142,7 +151,7 @@ def pprd_aug(graph, x, feat_drop_rate, frac):
     edge_index = th.cat((src.unsqueeze(0), dst.unsqueeze(0)), dim=0)
 
     new_edge_index, _ =  functional.compute_ppr(
-            edge_index, None, alpha=0.2
+            edge_index, None, alpha=0.2, eps=1e-4
     )
     nsrc = new_edge_index[0]
     ndst = new_edge_index[1]
