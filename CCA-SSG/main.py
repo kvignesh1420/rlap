@@ -1,7 +1,7 @@
 import argparse
 
 from model import CCA_SSG, LogReg
-from aug import random_aug, rlap_aug, ea_aug, nd_aug
+from aug import random_aug, rlap_aug, ea_aug, nd_aug, markovd_aug, pprd_aug, rws_aug, ed_deg_aug, ed_ppr_aug, ed_evc_aug
 from dataset import load
 
 import numpy as np
@@ -63,7 +63,13 @@ if __name__ == '__main__':
             "ED": random_aug,
             "RLAP": rlap_aug,
             "EA": ea_aug,
-            "ND": nd_aug
+            "ND": nd_aug,
+            "MARKOVD": markovd_aug,
+            "PPRD": pprd_aug,
+            "RWS": rws_aug,
+            "ED_DEG": ed_deg_aug,
+            "ED_PPR": ed_ppr_aug,
+            "ED_EVC": ed_evc_aug
         }
         if args.aug not in list(aug_func_mapper.keys()):
             raise ValueError("--aug should be in {}".format(",".join(list(aug_func_mapper.keys()))))
