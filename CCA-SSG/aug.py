@@ -289,7 +289,7 @@ def ed_evc_aug(graph, x, feat_drop_rate, frac):
     src = graph.edges()[0]
     dst = graph.edges()[1]
     edge_index = th.cat((src.unsqueeze(0), dst.unsqueeze(0)), dim=0)
-    device = edge_index.device()
+    device = edge_index.device
     data = Data(x=x, edge_index=edge_index, edge_weights=None).to(device)
     drop_weights = evc_drop_weights(data=data)
     mask = drop_edge_weighted(
