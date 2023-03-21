@@ -1,4 +1,5 @@
 import torch as th
+from GCL.augmentors import functional
 import numpy as np
 import dgl
 import sys
@@ -7,10 +8,10 @@ sys.path.append('../')
 from rlap import ApproximateCholesky
 
 
-def random_aug(graph, x, feat_drop_rate, edge_mask_rate):
+def random_aug(graph, x, feat_drop_rate, frac):
     n_node = graph.number_of_nodes()
 
-    edge_mask = mask_edge(graph, edge_mask_rate)
+    edge_mask = mask_edge(graph, frac)
     feat = drop_feature(x, feat_drop_rate)
 
     ng = dgl.graph([])
@@ -76,3 +77,36 @@ def mask_edge(graph, mask_prob):
     masks = th.bernoulli(1 - mask_rates)
     mask_idx = masks.nonzero().squeeze(1)
     return mask_idx
+
+
+def ea_aug(graph, x, feat_drop_rate, frac):
+    n_node = graph.number_of_nodes()
+
+    feat = drop_feature(x, feat_drop_rate)
+
+    ng = dgl.graph([])
+    ng.add_nodes(n_node)
+    src = graph.edges()[0]
+    dst = graph.edges()[1]
+    edge_index = th.cat((src.unsqueeze(0), dst.unsqueeze(0)), dim=0)
+    new_edge_index = functional.add_edge(edge_index=edge_index, ratio=frac)
+    nsrc = new_edge_index[0]
+    ndst = new_edge_index[1]
+    ng.add_edges(nsrc, ndst)
+    return ng, feat
+
+def nd_aug(graph, x, feat_drop_rate, frac):
+    n_node = graph.number_of_nodes()
+    feat = drop_feature(x, feat_drop_rate)
+    ng = dgl.graph([])
+    ng.add_nodes(n_node)
+    src = graph.edges()[0]
+    dst = graph.edges()[1]
+    edge_index = th.cat((src.unsqueeze(0), dst.unsqueeze(0)), dim=0)
+
+    new_edge_index, _ = functional.drop_node(edge_index=edge_index, edge_weight=None, keep_prob=frac)
+
+    nsrc = new_edge_index[0]
+    ndst = new_edge_index[1]
+    ng.add_edges(nsrc, ndst)
+    return ng, feat

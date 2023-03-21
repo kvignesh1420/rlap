@@ -1,7 +1,7 @@
 import argparse
 
 from model import CCA_SSG, LogReg
-from aug import random_aug, rlap_aug
+from aug import random_aug, rlap_aug, ea_aug, nd_aug
 from dataset import load
 
 import numpy as np
@@ -28,7 +28,7 @@ parser.add_argument('--n_layers', type=int, default=2, help='Number of GNN layer
 
 parser.add_argument('--use_mlp', action='store_true', default=False, help='Use MLP instead of GNN')
 
-parser.add_argument('--der', type=float, default=0.2, help='Drop edge ratio.')
+parser.add_argument('--der', type=float, default=0.2, help='Drop/Add edge/node ratio.')
 parser.add_argument('--dfr', type=float, default=0.2, help='Drop feature ratio.')
 
 parser.add_argument("--hid_dim", type=int, default=512, help='Hidden layer dim.')
@@ -59,15 +59,18 @@ if __name__ == '__main__':
         model.train()
         optimizer.zero_grad()
 
-        if args.aug == "ED":
-            graph1, feat1 = random_aug(graph, feat, args.dfr, args.der)
-            graph2, feat2 = random_aug(graph, feat, args.dfr, args.der)
-        
-        elif args.aug == "RLAP":
-            graph1, feat1 = rlap_aug(graph, feat, args.dfr, args.der)
-            graph2, feat2 = rlap_aug(graph, feat, args.dfr, args.der)
-        else:
-            raise ValueError("--aug should be in ['ED', 'RLAP'] ")
+        aug_func_mapper = {
+            "ED": random_aug,
+            "RLAP": rlap_aug,
+            "EA": ea_aug,
+            "ND": nd_aug
+        }
+        if args.aug not in list(aug_func_mapper.keys()):
+            raise ValueError("--aug should be in {}".format(",".join(list(aug_func_mapper.keys()))))
+
+        aug_func = aug_func_mapper[args.aug]
+        graph1, feat1 = aug_func(graph, feat, args.dfr, args.der)
+        graph2, feat2 = aug_func(graph, feat, args.dfr, args.der)
 
         graph1 = graph1.add_self_loop()
         graph2 = graph2.add_self_loop()
