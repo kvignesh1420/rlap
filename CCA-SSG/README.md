@@ -3,21 +3,30 @@ This code is based on the CCA-SSG model proposed in the NeurIPS 2021 paper [From
 
 Especially, we add the DGL version of our $rLap$ augmentor to run the experiments and change the following files:
 
-- `aug.py`: We add the `rLap` class and `rlap_aug` method to augment the graph as per DGL design.
+- `aug.py`: We add support for 10 augmentors based on our PyG based experiments for the DGL design.
 - `main.py`: A new argument parser option `--aug` is added to choose between the augmentors.
+- `run.sh` Helper file to run all experiments
+- `process_results.py`: Helper script to prepare the markdown table of results.
 
 Rest of the code is same as the one available here: https://github.com/hengruizhang98/CCA-SSG
 
-## Dependencies
-
-- Python 3.7
-- PyTorch 1.7.1
-- dgl 0.6.0
-
 ## Usage
-To run the codes, use the following commands:
 
-**NOTE: Please set `--aug RLAP` explicitly to use the `rLap` augmentor.**
+We have included a helper notebook that can run on COLAB for convenience. To run it:
+1. upload the `CCA_SSG_rLap.ipynb` to COLAB.
+2. Now, upload the code provided in the anonymous url to COLAB. Make sure to rename the uploaded folder to `rlap`.
+3. Execute the cells in order to get the results.
+
+Alternatively, if you have an environment setup already, use the following bash script:
+
+```bash
+$ bash run.sh
+```
+
+This script will run multiple experiments for a dataset-augmentor combination and even print the results in a markdown table in stdout. 
+
+_If you want to run the python scripts independently, please follow the instructions below:_
+
 
 ```python
 # Cora with EdgeDropping (default CCA-SSG augmentor)
