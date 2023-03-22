@@ -50,3 +50,6 @@ python main.py --aug $aug --dataname comp --epochs 50 --lambd 5e-4 --dfr 0.1 --d
 fi
 done
 done
+
+# prepare the markdown table with results
+python process_results.py

@@ -11,6 +11,8 @@ sys.path.append('../bazel-bin/rlap')
 sys.path.append('../')
 from rlap import ApproximateCholesky
 
+MARKOVD_CACHE = None
+PPRD_CACHE = None
 
 def random_aug(graph, x, feat_drop_rate, frac):
     n_node = graph.number_of_nodes()
@@ -47,7 +49,7 @@ class rLap():
 
         sparse_edge_info = ac.get_schur_complement(self.t)
         sampled_edge_index = th.Tensor(sparse_edge_info[:,:2]).long().t()
-        
+
         ng = dgl.graph([])
         ng.add_nodes(num_nodes)
         ng.add_edges(sampled_edge_index[0], sampled_edge_index[1])
@@ -132,10 +134,16 @@ def markovd_aug(graph, x, feat_drop_rate, frac):
     src = graph.edges()[0]
     dst = graph.edges()[1]
     edge_index = th.cat((src.unsqueeze(0), dst.unsqueeze(0)), dim=0)
-
-    new_edge_index, _ =  functional.compute_markov_diffusion(
+    
+    global MARKOVD_CACHE
+    if MARKOVD_CACHE is not None:
+        new_edge_index = MARKOVD_CACHE
+    else:
+        MARKOVD_CACHE, _ = functional.compute_markov_diffusion(
             edge_index, None, alpha=0.2, degree=16, sp_eps=1e-4
-    )
+        )
+        new_edge_index = MARKOVD_CACHE
+
     nsrc = new_edge_index[0]
     ndst = new_edge_index[1]
     ng.add_edges(nsrc, ndst)
@@ -149,10 +157,15 @@ def pprd_aug(graph, x, feat_drop_rate, frac):
     src = graph.edges()[0]
     dst = graph.edges()[1]
     edge_index = th.cat((src.unsqueeze(0), dst.unsqueeze(0)), dim=0)
-
-    new_edge_index, _ =  functional.compute_ppr(
+    
+    global PPRD_CACHE
+    if PPRD_CACHE is not None:
+        new_edge_index = PPRD_CACHE
+    else:
+        PPRD_CACHE, _ = functional.compute_ppr(
             edge_index, None, alpha=0.2, eps=1e-4
-    )
+        )
+        new_edge_index = PPRD_CACHE
     nsrc = new_edge_index[0]
     ndst = new_edge_index[1]
     ng.add_edges(nsrc, ndst)
