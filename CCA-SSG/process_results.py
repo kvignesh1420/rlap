@@ -8,7 +8,7 @@ from collections import defaultdict
 
 def main():
     table_entries = []
-    for dataset in ["CORA", "CITESEER"]:
+    for dataset in ["CORA", "CITESEER", "COMPUTERS"]:
         print("DATASET: ", dataset)
         directory = "./results/{}".format(dataset)
         filepaths = []
