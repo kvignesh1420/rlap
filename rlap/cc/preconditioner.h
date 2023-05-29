@@ -12,23 +12,6 @@ class Preconditioner{
     virtual ~Preconditioner() = default;
 };
 
-class OrderedPreconditioner : public Preconditioner{
-  public:
-    OrderedPreconditioner(Eigen::SparseMatrix<double>* A);
-    ~OrderedPreconditioner(){};
-    LDLi* getLDLi() override;
-    Eigen::MatrixXd getSchurComplement(int t) override;
-  private:
-    OrderedMatrix* getOrderedMatrix();
-    double getColumnLength(OrderedMatrix* ordmat, int i, std::vector<ColumnElement>* colspace);
-    void printColumn(OrderedMatrix* ordmat, int i);
-    void printColspace(std::vector<ColumnElement>* colspace);
-    void printMatrixDetails(OrderedMatrix* a);
-    double compressColumn(std::vector<ColumnElement>* colspace, double len);
-    Eigen::SparseMatrix<double>* _A;
-    OrderedMatrix* _ordmat;
-};
-
 class PriorityPreconditioner : public Preconditioner{
   public:
     PriorityPreconditioner(Eigen::SparseMatrix<double>* A);

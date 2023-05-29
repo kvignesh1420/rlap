@@ -22,7 +22,7 @@ int main(){
     std::cout << "nnz(A) = " << A->nonZeros() << std::endl;
     // initialize the factorizer, the default preconditioner is
     // the DegreePreconditioner, other options include:
-    // "order" for OrderedPreconditioner
+    // "random" for RandomPreconditioner
     ApproximateCholesky fact = ApproximateCholesky(/* *Adj= */A, /*pre=*/"degree");
 
     // retrieve the computed laplacian

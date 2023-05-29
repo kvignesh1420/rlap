@@ -176,11 +176,7 @@ void ApproximateCholesky::setup(Eigen::MatrixXd edge_info, int nrows, int ncols,
         delete _prec;
         _prec = nullptr;
     }
-    if(_o_v_str == "order"){
-        // TRACER("using OrderedPreconditioner\n");
-        _prec = new OrderedPreconditioner(_A);
-    }
-    else if(_o_v_str == "random"){
+    if(_o_v_str == "random"){
         // TRACER("using CoarseningPreconditioner\n");
         _prec = new RandomPreconditioner(_A, _o_n_str);
     }
@@ -237,11 +233,7 @@ void ApproximateCholesky::compute(){
         delete _prec;
         _prec = nullptr;
     }
-    if(_o_v_str == "order"){
-        TRACER("using OrderedPreconditioner\n");
-        _prec = new OrderedPreconditioner(_A);
-    }
-    else if(_o_v_str == "coarsen"){
+    if(_o_v_str == "coarsen"){
         TRACER("using CoarseningPreconditioner\n");
         _prec = new CoarseningPreconditioner(_A);
     }
