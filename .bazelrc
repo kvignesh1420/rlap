@@ -1,0 +1,35 @@
+# Bazel configuration file.
+# Default build options. These are applied first and unconditionally.
+
+build --spawn_strategy=standalone
+build -c opt
+
+# Make Bazel print out all options from rc files.
+build --announce_rc
+
+build --enable_platform_specific_config
+
+
+build --copt="-fvisibility=hidden"
+build --copt="-D_GLIBCXX_USE_CXX11_ABI=0"
+build --copt="-DEIGEN_MAX_ALIGN_BYTES=64"
+build --cxxopt="-std=c++14"
+build --cxxopt="-O2"
+build --cxxopt="-DEIGEN_MPL2_ONLY"
+build --enable_platform_specific_config
+build --noshow_progress
+build --noshow_loading_progress
+build --verbose_failures
+build --test_output=errors
+build --experimental_ui_max_stdouterr_bytes=-1
+
+# Default options should come above this line.
+
+build:macos --copt="-DGRPC_BAZEL_BUILD"
+build:macos --copt="-mmacosx-version-min=10.14"
+build:macos --linkopt="-mmacosx-version-min=10.14"
+build:macos --copt=-Wunguarded-availability
+build:windows --copt="/Zc:preprocessor"
+build:optimization --copt=-msse4.2
+build:optimization --copt=-mavx
+build:optimization --compilation_mode=opt
