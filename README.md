@@ -16,13 +16,11 @@ _The motivation and methodology behind `rLap` is presented in my [ICML 2023](htt
 
 
 ```bibtex
-@article{kothapalli2023randomized,
-      title={Randomized Schur Complement Views for Graph Contrastive Learning}, 
-      author={Vignesh Kothapalli},
-      year={2023},
-      eprint={2306.04004},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG}
+@inproceedings{Kothapalli2023RandomizedSC,
+  title={Randomized Schur Complement Views for Graph Contrastive Learning},
+  author={Vignesh Kothapalli},
+  booktitle={International Conference on Machine Learning},
+  year={2023}
 }
 ```
 
