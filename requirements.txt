@@ -15,7 +15,7 @@ Pillow==10.0.1
 prompt-toolkit==3.0.33
 psutil==5.9.4
 PyGCL==0.1.2
-Pygments==2.13.0
+Pygments==2.15.0
 pygrok==1.0.0
 regex==2022.10.31
 scikit-learn==1.1.3
