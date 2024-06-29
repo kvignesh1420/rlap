@@ -32,11 +32,11 @@ _The motivation and methodology behind `rLap` is presented in my [ICML 2023](htt
 $ python3.9 -m virtualenv .venv
 $ source .venv/bin/activate
 
-# install Eigen
-$ brew install eigen
+# install torch and torch-geometric if not present
+$ pip install torch torch-geometric
 
 # install rlap
-$ pip install .
+$ bash install.sh
 ```
 
 ## Usage

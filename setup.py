@@ -45,7 +45,6 @@ def get_extensions():
     sources = list(glob.glob(os.path.join(extensions_dir, "*.cc")))
     # eigen_include_dir = "/usr/local/include/eigen3"
     eigen_include_dir = "third_party/eigen-3.4.0"
-    rlap_include_dir = "rlap/csrc"
 
     ext_modules = [
         extension(
@@ -53,7 +52,7 @@ def get_extensions():
             sources,
             extra_compile_args=extra_compile_args,
             extra_link_args=extra_link_args,
-            include_dirs=[eigen_include_dir, rlap_include_dir],
+            include_dirs=[eigen_include_dir, extensions_dir],
         )
     ]
 
