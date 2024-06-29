@@ -36,10 +36,48 @@ $ source .venv/bin/activate
 $ pip install torch torch-geometric
 
 # install rlap
-$ bash install.sh
+$ pip install .
 ```
 
 ## Usage
+
+The `rlap` API exposes a simple torch operation to obtain the randomized schur complement of a graph. A simple example is shown below:
+
+```py
+import torch
+from torch_geometric.utils import barabasi_albert_graph, to_undirected
+import rlap
+
+num_nodes = 100
+# prepare a sample graph
+edge_index = barabasi_albert_graph(num_nodes=num_nodes, num_edges=num_nodes//2)
+
+# ensure the graph is undirected
+edge_index = to_undirected(edge_index=edge_index, num_nodes=num_nodes)
+
+# add unit weights to the edges if not present in your graph.
+edge_weights = torch.ones((1, edge_index.shape[1])).to(edge_index.device)
+
+# concatenate to prepare the edge info
+edge_info = torch.concat((edge_index, edge_weights), dim=0).t()
+
+# compute the randomized schur complement
+sc_edge_info = rlap.ops.approximate_cholesky(
+    edge_info=edge_info,
+    num_nodes=num_nodes,
+    num_remove=50, # number of nodes to eliminate
+    o_v="random", # choose from ["random", "degree", "coarsen"]
+    o_n="asc", # choose from ["asc", "desc", "random"]
+)
+
+# obtain the edge_index
+sc_edge_index = (torch.Tensor(sc_edge_info[:, :2]).long().t().to(edge_index.device))
+
+# obtain the edge_weights (if necessary)
+sc_edge_weights = torch.Tensor(sc_edge_info[:,-1]).t().to(edge_index.device)
+```
+
+### Benchmarks
 
 The pytorch geometric implementation of the augmentor is based on the [PyGCL](https://github.com/PyGCL/PyGCL) library for reproducible experiments and is available in `augmentor_benchmarks.py`. Additionally, a DGL implementation is made available in `CCA-SSG/aug.py`.
 
@@ -48,8 +86,6 @@ To run the following scripts, change the directory to:
 ```bash
 $ cd scripts
 ```
-
-### Benchmarks
 
 Use the following shell script to benchmark all the augmentors on node and graph classification datasets
 
