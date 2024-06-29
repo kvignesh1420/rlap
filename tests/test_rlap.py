@@ -37,17 +37,15 @@ class TestApproximateCholesky(TestCase):
 
     def _test_fn(self):
         num_nodes = 100
-        edge_index = self.create_dummy_graph(num_nodes=num_nodes).double()
+        edge_index = self.create_dummy_graph(num_nodes=num_nodes)
         self._is_symmetric(edge_index=edge_index, num_nodes=num_nodes)
         # print(f"edge_index shape: {edge_index.shape}")
-        edge_weights = (
-            torch.ones((1, edge_index.shape[1])).to(edge_index.device).double()
-        )
+        edge_weights = torch.ones((1, edge_index.shape[1])).to(edge_index.device)
         edge_info = torch.concat((edge_index, edge_weights), dim=0).t()
         num_remove = 50
         o_v = "random"
         o_n = "asc"
-        assert edge_index.dtype == torch.double
+
         result = rlap.ops.approximate_cholesky(
             edge_info=edge_info,
             num_nodes=num_nodes,

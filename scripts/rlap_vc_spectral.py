@@ -58,7 +58,6 @@ def get_rlap_sc_stats(data, batch_count, nodes_to_eliminate, o_v, o_n):
         adj = tg_utils.to_dense_adj(edge_index=edge_index)[0]
         U, S, V = torch.svd_lowrank(adj)
         max_sv.append(S[0])
-    del ac
     return max_sv, num_unique_nodes, num_edges
 
 

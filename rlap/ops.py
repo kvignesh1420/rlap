@@ -8,7 +8,7 @@ def approximate_cholesky(
 ) -> Tensor:
     """Performs a * b + c in an efficient fused kernel"""
     return torch.ops.extension_cpp.approximate_cholesky.default(
-        edge_info=edge_info,
+        edge_info=edge_info.double(),
         num_nodes=num_nodes,
         num_remove=num_remove,
         o_v=o_v,
