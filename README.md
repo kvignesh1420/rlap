@@ -55,15 +55,10 @@ edge_index = barabasi_albert_graph(num_nodes=num_nodes, num_edges=num_nodes//2)
 # ensure the graph is undirected
 edge_index = to_undirected(edge_index=edge_index, num_nodes=num_nodes)
 
-# add unit weights to the edges if not present in your graph.
-edge_weights = torch.ones((1, edge_index.shape[1])).to(edge_index.device)
-
-# concatenate to prepare the edge info
-edge_info = torch.concat((edge_index, edge_weights), dim=0).t()
-
 # compute the randomized schur complement
 sc_edge_info = rlap.ops.approximate_cholesky(
-    edge_info=edge_info,
+    edge_index=edge_index,
+    edge_weights=None, # pass the 1d weights tensor (for the edges) if needed
     num_nodes=num_nodes,
     num_remove=50, # number of nodes to eliminate
     o_v="random", # choose from ["random", "degree", "coarsen"]

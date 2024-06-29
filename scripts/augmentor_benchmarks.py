@@ -76,12 +76,10 @@ class rLap(A.Augmentor):
         x, edge_index, edge_weights = g.unfold()
         num_nodes = edge_index.max().item() + 1
         self.num_remove = int(self.frac * num_nodes)
-        _edge_weights = edge_weights
-        if _edge_weights is None:
-            edge_weights = torch.ones((1, edge_index.shape[1])).to(edge_index.device)
-        edge_info = torch.concat((edge_index, edge_weights), dim=0).t()
+
         sparse_edge_info = rlap.ops.approximate_cholesky(
-            edge_info=edge_info.to("cpu"),
+            edge_index=edge_index,
+            edge_weights=edge_weights,
             num_nodes=num_nodes,
             num_remove=self.num_remove,
             o_v=self.o_v,
@@ -131,12 +129,10 @@ class rLapPPRDiffusion(A.Augmentor):
         x, edge_index, edge_weights = g.unfold()
         num_nodes = edge_index.max().item() + 1
         self.num_remove = int(self.frac * num_nodes)
-        _edge_weights = edge_weights
-        if _edge_weights is None:
-            edge_weights = torch.ones((1, edge_index.shape[1])).to(edge_index.device)
-        edge_info = torch.concat((edge_index, edge_weights), dim=0).t()
+
         sparse_edge_info = rlap.ops.approximate_cholesky(
-            edge_info=edge_info.to("cpu"),
+            edge_index=edge_index,
+            edge_weights=edge_weights,
             num_nodes=num_nodes,
             num_remove=self.num_remove,
             o_v=self.o_v,

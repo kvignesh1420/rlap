@@ -40,15 +40,12 @@ class rLap:
 
         num_nodes = graph.number_of_nodes()
         self.num_remove = int(self.frac * num_nodes)
-        edge_index = graph.edges()
-        edge_weights = th.ones((1, edge_index[0].shape[0]))
-        edge_info = th.cat(
-            (edge_index[0].unsqueeze(0), edge_index[1].unsqueeze(0), edge_weights),
-            dim=0,
-        ).t()
+        edges = graph.edges()
+        edge_index = th.cat((edges[0].unsqueeze(0), edges[1].unsqueeze(0)), dim=0)
 
         sparse_edge_info = rlap.ops.approximate_cholesky(
-            edge_info=edge_info.to("cpu"),
+            edge_index=edge_index,
+            edge_weights=None,
             num_nodes=num_nodes,
             num_remove=self.num_remove,
             o_v=self.o_v,

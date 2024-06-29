@@ -17,19 +17,16 @@ def get_rlap_sc_stats(data, batch_count, nodes_to_eliminate, o_v, o_n):
         data.__getattribute__("edge_weights")
     except AttributeError:
         edge_weights = None
-    _edge_weights = edge_weights
-    if _edge_weights is None:
-        edge_weights = torch.ones((1, edge_index.shape[1])).to(edge_index.device)
 
     num_unique_nodes = []
     num_edges = []
     max_sv = []
     num_nodes = edge_index.max().item() + 1
     for _ in tqdm(range(batch_count)):
-        edge_info = torch.concat((edge_index, edge_weights), dim=0).t()
 
         sparse_edge_info = rlap.ops.approximate_cholesky(
-            edge_info=edge_info.to("cpu"),
+            edge_index=edge_index,
+            edge_weights=edge_weights,
             num_nodes=num_nodes,
             num_remove=nodes_to_eliminate,
             o_v=o_v,
