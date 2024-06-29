@@ -6,10 +6,11 @@ import os
 import pandas as pd
 import numpy as np
 
+
 def main_cpu():
     directory = "./results/overheads/cpu"
     files = []
-    for (dirpath, dirnames, filenames) in os.walk(directory):
+    for dirpath, dirnames, filenames in os.walk(directory):
         print(dirpath)
         for filename in filenames:
             files.append(dirpath + "/" + filename)
@@ -26,18 +27,22 @@ def main_cpu():
             for line in lines:
                 if "aug(" in line:
                     tokens = line.split(" ")
-                    tokens = [tok for tok in tokens if tok!=""]
+                    tokens = [tok for tok in tokens if tok != ""]
                     mem_usage.append(float(tokens[3]))
                 if "DURATION" in line:
                     tokens = line.split(" ")
-                    tokens = [tok for tok in tokens if tok!=""]
+                    tokens = [tok for tok in tokens if tok != ""]
                     latencies.append(float(tokens[1]))
 
         entry = {
             "augmentor": aug_name,
             "dataset": dataset_name,
-            "memory": r"${} \pm {}$".format(np.round(np.mean(mem_usage),4), np.round(np.std(mem_usage),4)),
-            "cpu_latency": r"${} \pm {}$".format(np.round(np.mean(latencies),4), np.round(np.std(latencies),4)),
+            "memory": r"${} \pm {}$".format(
+                np.round(np.mean(mem_usage), 4), np.round(np.std(mem_usage), 4)
+            ),
+            "cpu_latency": r"${} \pm {}$".format(
+                np.round(np.mean(latencies), 4), np.round(np.std(latencies), 4)
+            ),
         }
         table_entries.append(entry)
 
@@ -49,7 +54,7 @@ def main_cpu():
 def main_gpu():
     directory = "./results/overheads/gpu"
     files = []
-    for (dirpath, dirnames, filenames) in os.walk(directory):
+    for dirpath, dirnames, filenames in os.walk(directory):
         print(dirpath)
         for filename in filenames:
             files.append(dirpath + "/" + filename)
@@ -65,19 +70,22 @@ def main_gpu():
             for line in lines:
                 if "DURATION" in line:
                     tokens = line.split(" ")
-                    tokens = [tok for tok in tokens if tok!=""]
+                    tokens = [tok for tok in tokens if tok != ""]
                     latencies.append(float(tokens[1]))
 
         entry = {
             "augmentor": aug_name,
             "dataset": dataset_name,
-            "gpu_latency": r"${} \pm {}$".format(np.round(np.mean(latencies),4), np.round(np.std(latencies),4)),
+            "gpu_latency": r"${} \pm {}$".format(
+                np.round(np.mean(latencies), 4), np.round(np.std(latencies), 4)
+            ),
         }
         table_entries.append(entry)
 
     df = pd.DataFrame(table_entries)
     df = df.sort_values(["dataset", "augmentor"])
     return df
+
 
 if __name__ == "__main__":
     df_cpu = main_cpu()

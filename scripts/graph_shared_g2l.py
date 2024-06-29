@@ -1,6 +1,7 @@
 import argparse
 import torch
 import torch.nn.functional as F
+
 torch.cuda.empty_cache()
 import copy
 import torch
@@ -17,7 +18,13 @@ from GCL.models import BootstrapContrast
 from torch_geometric.nn import GINConv, global_add_pool
 from torch_geometric.data import DataLoader
 from torch_geometric.datasets import TUDataset
-from augmentor_benchmarks import EdgeAdding, EdgeDroppingDegree, EdgeDroppingEVC, EdgeDroppingPR, rLap
+from augmentor_benchmarks import (
+    EdgeAdding,
+    EdgeDroppingDegree,
+    EdgeDroppingEVC,
+    EdgeDroppingPR,
+    rLap,
+)
 
 from sklearn.metrics import f1_score, accuracy_score
 from GCL.eval import BaseEvaluator
@@ -35,8 +42,13 @@ class LogisticRegression(nn.Module):
 
 
 class LREvaluator(BaseEvaluator):
-    def __init__(self, num_epochs: int = 2000, learning_rate: float = 0.01,
-                 weight_decay: float = 0.0, test_interval: int = 20):
+    def __init__(
+        self,
+        num_epochs: int = 2000,
+        learning_rate: float = 0.01,
+        weight_decay: float = 0.0,
+        test_interval: int = 20,
+    ):
         self.num_epochs = num_epochs
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
@@ -49,7 +61,11 @@ class LREvaluator(BaseEvaluator):
         y = y.to(device)
         num_classes = y.max().item() + 1
         classifier = LogisticRegression(input_dim, num_classes).to(device)
-        optimizer = Adam(classifier.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+        optimizer = Adam(
+            classifier.parameters(),
+            lr=self.learning_rate,
+            weight_decay=self.weight_decay,
+        )
         output_fn = nn.LogSoftmax(dim=-1)
         criterion = nn.NLLLoss()
 
@@ -63,23 +79,23 @@ class LREvaluator(BaseEvaluator):
             classifier.train()
             optimizer.zero_grad()
 
-            output = classifier(x[split['train']])
-            loss = criterion(output_fn(output), y[split['train']])
+            output = classifier(x[split["train"]])
+            loss = criterion(output_fn(output), y[split["train"]])
 
             loss.backward()
             optimizer.step()
 
             if (epoch + 1) % self.test_interval == 0:
                 classifier.eval()
-                y_test = y[split['test']].detach().cpu().numpy()
-                y_pred = classifier(x[split['test']]).argmax(-1).detach().cpu().numpy()
+                y_test = y[split["test"]].detach().cpu().numpy()
+                y_pred = classifier(x[split["test"]]).argmax(-1).detach().cpu().numpy()
                 accuracy = accuracy_score(y_test, y_pred)
-                test_micro = f1_score(y_test, y_pred, average='micro')
-                test_macro = f1_score(y_test, y_pred, average='macro')
+                test_micro = f1_score(y_test, y_pred, average="micro")
+                test_macro = f1_score(y_test, y_pred, average="macro")
 
-                y_val = y[split['valid']].detach().cpu().numpy()
-                y_pred = classifier(x[split['valid']]).argmax(-1).detach().cpu().numpy()
-                val_micro = f1_score(y_val, y_pred, average='micro')
+                y_val = y[split["valid"]].detach().cpu().numpy()
+                y_pred = classifier(x[split["valid"]]).argmax(-1).detach().cpu().numpy()
+                val_micro = f1_score(y_val, y_pred, average="micro")
 
                 if val_micro > best_val_micro:
                     best_val_micro = val_micro
@@ -89,22 +105,20 @@ class LREvaluator(BaseEvaluator):
                     best_accuracy = accuracy
 
         return {
-            'micro_f1': best_test_micro,
-            'macro_f1': best_test_macro,
-            'accuracy': best_accuracy
+            "micro_f1": best_test_micro,
+            "macro_f1": best_test_macro,
+            "accuracy": best_accuracy,
         }
 
 
-
-
 class Normalize(torch.nn.Module):
-    def __init__(self, dim=None, norm='batch'):
+    def __init__(self, dim=None, norm="batch"):
         super().__init__()
-        if dim is None or norm == 'none':
+        if dim is None or norm == "none":
             self.norm = lambda x: x
-        if norm == 'batch':
+        if norm == "batch":
             self.norm = torch.nn.BatchNorm1d(dim)
-        elif norm == 'layer':
+        elif norm == "layer":
             self.norm = torch.nn.LayerNorm(dim)
 
     def forward(self, x):
@@ -115,13 +129,21 @@ def make_gin_conv(input_dim: int, out_dim: int) -> GINConv:
     mlp = torch.nn.Sequential(
         torch.nn.Linear(input_dim, out_dim),
         torch.nn.ReLU(),
-        torch.nn.Linear(out_dim, out_dim))
+        torch.nn.Linear(out_dim, out_dim),
+    )
     return GINConv(mlp)
 
 
 class GConv(torch.nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_layers, dropout=0.2,
-                 encoder_norm='batch', projector_norm='batch'):
+    def __init__(
+        self,
+        input_dim,
+        hidden_dim,
+        num_layers,
+        dropout=0.2,
+        encoder_norm="batch",
+        projector_norm="batch",
+    ):
         super(GConv, self).__init__()
         self.activation = torch.nn.PReLU()
         self.dropout = dropout
@@ -136,7 +158,8 @@ class GConv(torch.nn.Module):
             torch.nn.Linear(hidden_dim, hidden_dim),
             Normalize(hidden_dim, norm=projector_norm),
             torch.nn.PReLU(),
-            torch.nn.Dropout(dropout))
+            torch.nn.Dropout(dropout),
+        )
 
     def forward(self, x, edge_index, edge_weight=None):
         z = x
@@ -149,7 +172,9 @@ class GConv(torch.nn.Module):
 
 
 class Encoder(torch.nn.Module):
-    def __init__(self, encoder, augmentor, hidden_dim, dropout=0.2, predictor_norm='batch'):
+    def __init__(
+        self, encoder, augmentor, hidden_dim, dropout=0.2, predictor_norm="batch"
+    ):
         super(Encoder, self).__init__()
         self.online_encoder = encoder
         self.target_encoder = None
@@ -158,7 +183,8 @@ class Encoder(torch.nn.Module):
             torch.nn.Linear(hidden_dim, hidden_dim),
             Normalize(hidden_dim, norm=predictor_norm),
             torch.nn.PReLU(),
-            torch.nn.Dropout(dropout))
+            torch.nn.Dropout(dropout),
+        )
 
     def get_target_encoder(self):
         if self.target_encoder is None:
@@ -169,7 +195,9 @@ class Encoder(torch.nn.Module):
         return self.target_encoder
 
     def update_target_encoder(self, momentum: float):
-        for p, new_p in zip(self.get_target_encoder().parameters(), self.online_encoder.parameters()):
+        for p, new_p in zip(
+            self.get_target_encoder().parameters(), self.online_encoder.parameters()
+        ):
             next_p = momentum * p.data + (1 - momentum) * new_p.data
             p.data = next_p
 
@@ -200,16 +228,25 @@ def train(encoder_model, contrast_model, dataloader, optimizer):
     total_loss = 0
 
     for data in dataloader:
-        data = data.to('cuda')
+        data = data.to("cuda")
         if data.x is None:
             num_nodes = data.batch.size(0)
-            data.x = torch.ones((num_nodes, 1), dtype=torch.float32).to(data.batch.device)
+            data.x = torch.ones((num_nodes, 1), dtype=torch.float32).to(
+                data.batch.device
+            )
 
         optimizer.zero_grad()
-        _, _, h1_pred, h2_pred, g1_target, g2_target = encoder_model(data.x, data.edge_index, batch=data.batch)
+        _, _, h1_pred, h2_pred, g1_target, g2_target = encoder_model(
+            data.x, data.edge_index, batch=data.batch
+        )
 
-        loss = contrast_model(h1_pred=h1_pred, h2_pred=h2_pred,
-                              g1_target=g1_target.detach(), g2_target=g2_target.detach(), batch=data.batch)
+        loss = contrast_model(
+            h1_pred=h1_pred,
+            h2_pred=h2_pred,
+            g1_target=g1_target.detach(),
+            g2_target=g2_target.detach(),
+            batch=data.batch,
+        )
         loss.backward()
         optimizer.step()
         encoder_model.update_target_encoder(0.99)
@@ -224,10 +261,12 @@ def test(encoder_model, dataloader):
     x = []
     y = []
     for data in dataloader:
-        data = data.to('cuda')
+        data = data.to("cuda")
         if data.x is None:
             num_nodes = data.batch.size(0)
-            data.x = torch.ones((num_nodes, 1), dtype=torch.float32, device=data.batch.device)
+            data.x = torch.ones(
+                (num_nodes, 1), dtype=torch.float32, device=data.batch.device
+            )
         g1, g2, _, _, _, _ = encoder_model(data.x, data.edge_index, batch=data.batch)
         z = torch.cat([g1, g2], dim=1)
         x.append(z)
@@ -242,26 +281,26 @@ def test(encoder_model, dataloader):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('augmentor', type=str)
-    parser.add_argument('dataset', type=str)
-    parser.add_argument('num_layers', type=int)
-    parser.add_argument('lr', type=float)
-    parser.add_argument('wd', type=float)
-    parser.add_argument('hidden_dim', type=int)
-    parser.add_argument('mode', type=str)
-    parser.add_argument('fraction1', type=float)
-    parser.add_argument('fraction2', type=float)
+    parser.add_argument("augmentor", type=str)
+    parser.add_argument("dataset", type=str)
+    parser.add_argument("num_layers", type=int)
+    parser.add_argument("lr", type=float)
+    parser.add_argument("wd", type=float)
+    parser.add_argument("hidden_dim", type=int)
+    parser.add_argument("mode", type=str)
+    parser.add_argument("fraction1", type=float)
+    parser.add_argument("fraction2", type=float)
     args = parser.parse_args()
     print(args)
 
-    device = torch.device('cuda')
-    path = osp.join(osp.expanduser('~'), 'datasets')
+    device = torch.device("cuda")
+    path = osp.join(osp.expanduser("~"), "datasets")
     datasets = {
-        "PROTEINS": lambda: TUDataset(path, name='PROTEINS_full'),
-        "IMDB-BINARY": lambda: TUDataset(path, name='IMDB-BINARY'),
-        "IMDB-MULTI": lambda: TUDataset(path, name='IMDB-MULTI'),
-        "MUTAG": lambda: TUDataset(path, name='MUTAG'),
-        "NCI1": lambda: TUDataset(path, name='NCI1'),
+        "PROTEINS": lambda: TUDataset(path, name="PROTEINS_full"),
+        "IMDB-BINARY": lambda: TUDataset(path, name="IMDB-BINARY"),
+        "IMDB-MULTI": lambda: TUDataset(path, name="IMDB-MULTI"),
+        "MUTAG": lambda: TUDataset(path, name="MUTAG"),
+        "NCI1": lambda: TUDataset(path, name="NCI1"),
     }
 
     dataset = datasets[args.dataset]()
@@ -272,75 +311,170 @@ def main():
     fraction2 = args.fraction2
     augmentors = {
         "rLap": [
-            A.Compose([rLap(frac=fraction1, o_v="random", o_n="asc"), A.FeatureMasking(pf=0.3)]),
-            A.Compose([rLap(frac=fraction2, o_v="random", o_n="asc"), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [
+                    rLap(frac=fraction1, o_v="random", o_n="asc"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
+            A.Compose(
+                [
+                    rLap(frac=fraction2, o_v="random", o_n="asc"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
         ],
         "rLapRandomDesc": [
-            A.Compose([rLap(frac=fraction1, o_v="random", o_n="desc"), A.FeatureMasking(pf=0.3)]),
-            A.Compose([rLap(frac=fraction2, o_v="random", o_n="desc"), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [
+                    rLap(frac=fraction1, o_v="random", o_n="desc"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
+            A.Compose(
+                [
+                    rLap(frac=fraction2, o_v="random", o_n="desc"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
         ],
         "rLapRandomRandom": [
-            A.Compose([rLap(frac=fraction1, o_v="random", o_n="random"), A.FeatureMasking(pf=0.3)]),
-            A.Compose([rLap(frac=fraction2, o_v="random", o_n="random"), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [
+                    rLap(frac=fraction1, o_v="random", o_n="random"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
+            A.Compose(
+                [
+                    rLap(frac=fraction2, o_v="random", o_n="random"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
         ],
         "rLapDegree": [
-            A.Compose([rLap(frac=fraction1, o_v="degree", o_n="asc"), A.FeatureMasking(pf=0.3)]),
-            A.Compose([rLap(frac=fraction2, o_v="degree", o_n="asc"), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [
+                    rLap(frac=fraction1, o_v="degree", o_n="asc"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
+            A.Compose(
+                [
+                    rLap(frac=fraction2, o_v="degree", o_n="asc"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
         ],
         "rLapDegreeDesc": [
-            A.Compose([rLap(frac=fraction1, o_v="degree", o_n="desc"), A.FeatureMasking(pf=0.3)]),
-            A.Compose([rLap(frac=fraction2, o_v="degree", o_n="desc"), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [
+                    rLap(frac=fraction1, o_v="degree", o_n="desc"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
+            A.Compose(
+                [
+                    rLap(frac=fraction2, o_v="degree", o_n="desc"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
         ],
         "rLapDegreeRandom": [
-            A.Compose([rLap(frac=fraction1, o_v="degree", o_n="random"), A.FeatureMasking(pf=0.3)]),
-            A.Compose([rLap(frac=fraction2, o_v="degree", o_n="random"), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [
+                    rLap(frac=fraction1, o_v="degree", o_n="random"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
+            A.Compose(
+                [
+                    rLap(frac=fraction2, o_v="degree", o_n="random"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
         ],
         "rLapCoarsen": [
             A.Compose([rLap(frac=fraction1, o_v="coarsen"), A.FeatureMasking(pf=0.3)]),
-            A.Compose([rLap(frac=fraction2, o_v="coarsen"), A.FeatureMasking(pf=0.3)])
+            A.Compose([rLap(frac=fraction2, o_v="coarsen"), A.FeatureMasking(pf=0.3)]),
         ],
         "EdgeAddition": [
             A.Compose([EdgeAdding(pe=fraction1), A.FeatureMasking(pf=0.3)]),
-            A.Compose([EdgeAdding(pe=fraction2), A.FeatureMasking(pf=0.3)])
+            A.Compose([EdgeAdding(pe=fraction2), A.FeatureMasking(pf=0.3)]),
         ],
         "EdgeDropping": [
             A.Compose([A.EdgeRemoving(pe=fraction1), A.FeatureMasking(pf=0.3)]),
-            A.Compose([A.EdgeRemoving(pe=fraction2), A.FeatureMasking(pf=0.3)])
+            A.Compose([A.EdgeRemoving(pe=fraction2), A.FeatureMasking(pf=0.3)]),
         ],
         "EdgeDroppingDegree": [
-            A.Compose([EdgeDroppingDegree(p=fraction1, threshold=0.7), A.FeatureMasking(pf=0.3)]),
-            A.Compose([EdgeDroppingDegree(p=fraction2, threshold=0.7), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [
+                    EdgeDroppingDegree(p=fraction1, threshold=0.7),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
+            A.Compose(
+                [
+                    EdgeDroppingDegree(p=fraction2, threshold=0.7),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
         ],
         "EdgeDroppingPR": [
-            A.Compose([EdgeDroppingPR(p=fraction1, threshold=0.7), A.FeatureMasking(pf=0.3)]),
-            A.Compose([EdgeDroppingPR(p=fraction2, threshold=0.7), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [EdgeDroppingPR(p=fraction1, threshold=0.7), A.FeatureMasking(pf=0.3)]
+            ),
+            A.Compose(
+                [EdgeDroppingPR(p=fraction2, threshold=0.7), A.FeatureMasking(pf=0.3)]
+            ),
         ],
         "EdgeDroppingEVC": [
-            A.Compose([EdgeDroppingEVC(p=fraction1, threshold=0.7), A.FeatureMasking(pf=0.3)]),
-            A.Compose([EdgeDroppingEVC(p=fraction2, threshold=0.7), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [EdgeDroppingEVC(p=fraction1, threshold=0.7), A.FeatureMasking(pf=0.3)]
+            ),
+            A.Compose(
+                [EdgeDroppingEVC(p=fraction2, threshold=0.7), A.FeatureMasking(pf=0.3)]
+            ),
         ],
         "NodeDropping": [
             A.Compose([A.NodeDropping(pn=fraction1), A.FeatureMasking(pf=0.3)]),
-            A.Compose([A.NodeDropping(pn=fraction2), A.FeatureMasking(pf=0.3)])
+            A.Compose([A.NodeDropping(pn=fraction2), A.FeatureMasking(pf=0.3)]),
         ],
         "RandomWalkSubgraph": [
-            A.Compose([A.RWSampling(num_seeds=1000, walk_length=10), A.FeatureMasking(pf=0.3)]),
-            A.Compose([A.RWSampling(num_seeds=1000, walk_length=10), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [A.RWSampling(num_seeds=1000, walk_length=10), A.FeatureMasking(pf=0.3)]
+            ),
+            A.Compose(
+                [A.RWSampling(num_seeds=1000, walk_length=10), A.FeatureMasking(pf=0.3)]
+            ),
         ],
         "PPRDiffusion": [
             A.Compose([A.Identity(), A.FeatureMasking(pf=0.3)]),
-            A.Compose([A.PPRDiffusion(alpha=0.2, use_cache=False), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [A.PPRDiffusion(alpha=0.2, use_cache=False), A.FeatureMasking(pf=0.3)]
+            ),
         ],
         "MarkovDiffusion": [
             A.Compose([A.Identity(), A.FeatureMasking(pf=0.3)]),
-            A.Compose([A.MarkovDiffusion(alpha=0.2, use_cache=False), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [
+                    A.MarkovDiffusion(alpha=0.2, use_cache=False),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
         ],
     }
     aug1, aug2 = augmentors[args.augmentor]
 
-    gconv = GConv(input_dim=input_dim, hidden_dim=args.hidden_dim, num_layers=args.num_layers).to(device)
-    encoder_model = Encoder(encoder=gconv, augmentor=(aug1, aug2), hidden_dim=args.hidden_dim).to(device)
-    contrast_model = BootstrapContrast(loss=L.BootstrapLatent(), mode=args.mode).to(device)
+    gconv = GConv(
+        input_dim=input_dim, hidden_dim=args.hidden_dim, num_layers=args.num_layers
+    ).to(device)
+    encoder_model = Encoder(
+        encoder=gconv, augmentor=(aug1, aug2), hidden_dim=args.hidden_dim
+    ).to(device)
+    contrast_model = BootstrapContrast(loss=L.BootstrapLatent(), mode=args.mode).to(
+        device
+    )
 
     optimizer = Adam(encoder_model.parameters(), lr=args.lr, weight_decay=args.wd)
 
@@ -348,10 +482,10 @@ def main():
     current_tolerance = 0
     best_loss = 1e8
     best_epoch = 0
-    with tqdm(total=2000, desc='(T)') as pbar:
+    with tqdm(total=2000, desc="(T)") as pbar:
         for epoch in range(1, 2001):
             loss = train(encoder_model, contrast_model, dataloader, optimizer)
-            pbar.set_postfix({'loss': loss})
+            pbar.set_postfix({"loss": loss})
             pbar.update()
             if loss < best_loss:
                 best_loss = loss
@@ -366,8 +500,10 @@ def main():
 
     for i in tqdm(range(10)):
         test_result = test(encoder_model, dataloader)
-        print(f'Test run: {i} : Best test F1Mi={test_result["micro_f1"]:.4f}, F1Ma={test_result["macro_f1"]:.4f}, Acc={test_result["accuracy"]:.4f}')
+        print(
+            f'Test run: {i} : Best test F1Mi={test_result["micro_f1"]:.4f}, F1Ma={test_result["macro_f1"]:.4f}, Acc={test_result["accuracy"]:.4f}'
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

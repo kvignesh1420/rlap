@@ -1,6 +1,7 @@
 import argparse
 import torch
 import torch.nn.functional as F
+
 torch.cuda.empty_cache()
 import os.path as osp
 import GCL.losses as L
@@ -16,7 +17,14 @@ from torch_geometric.nn import GCNConv
 from torch_geometric.nn.inits import uniform
 from torch_geometric.utils import subgraph, remove_self_loops
 from torch_geometric.datasets import Planetoid, Coauthor, Amazon
-from augmentor_benchmarks import EdgeAdding, EdgeDroppingDegree, EdgeDroppingEVC, EdgeDroppingPR, rLap, rLapPPRDiffusion
+from augmentor_benchmarks import (
+    EdgeAdding,
+    EdgeDroppingDegree,
+    EdgeDroppingEVC,
+    EdgeDroppingPR,
+    rLap,
+    rLapPPRDiffusion,
+)
 
 from sklearn.metrics import f1_score, accuracy_score
 from GCL.eval import BaseEvaluator
@@ -35,11 +43,11 @@ class JSD(Loss):
         num_pos = pos_mask.int().sum()
         similarity = self.discriminator(anchor, sample)
 
-        E_pos = (np.log(2) - F.softplus(- similarity * pos_mask)).sum()
+        E_pos = (np.log(2) - F.softplus(-similarity * pos_mask)).sum()
         E_pos /= num_pos
 
         neg_sim = similarity * neg_mask
-        E_neg = (F.softplus(- neg_sim) + neg_sim - np.log(2)).sum()
+        E_neg = (F.softplus(-neg_sim) + neg_sim - np.log(2)).sum()
         E_neg /= num_neg
 
         return E_neg - E_pos
@@ -57,8 +65,13 @@ class LogisticRegression(nn.Module):
 
 
 class LREvaluator(BaseEvaluator):
-    def __init__(self, num_epochs: int = 2000, learning_rate: float = 0.01,
-                 weight_decay: float = 0.0, test_interval: int = 20):
+    def __init__(
+        self,
+        num_epochs: int = 2000,
+        learning_rate: float = 0.01,
+        weight_decay: float = 0.0,
+        test_interval: int = 20,
+    ):
         self.num_epochs = num_epochs
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
@@ -71,7 +84,11 @@ class LREvaluator(BaseEvaluator):
         y = y.to(device)
         num_classes = y.max().item() + 1
         classifier = LogisticRegression(input_dim, num_classes).to(device)
-        optimizer = Adam(classifier.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+        optimizer = Adam(
+            classifier.parameters(),
+            lr=self.learning_rate,
+            weight_decay=self.weight_decay,
+        )
         output_fn = nn.LogSoftmax(dim=-1)
         criterion = nn.NLLLoss()
 
@@ -85,23 +102,23 @@ class LREvaluator(BaseEvaluator):
             classifier.train()
             optimizer.zero_grad()
 
-            output = classifier(x[split['train']])
-            loss = criterion(output_fn(output), y[split['train']])
+            output = classifier(x[split["train"]])
+            loss = criterion(output_fn(output), y[split["train"]])
 
             loss.backward()
             optimizer.step()
 
             if (epoch + 1) % self.test_interval == 0:
                 classifier.eval()
-                y_test = y[split['test']].detach().cpu().numpy()
-                y_pred = classifier(x[split['test']]).argmax(-1).detach().cpu().numpy()
+                y_test = y[split["test"]].detach().cpu().numpy()
+                y_pred = classifier(x[split["test"]]).argmax(-1).detach().cpu().numpy()
                 accuracy = accuracy_score(y_test, y_pred)
-                test_micro = f1_score(y_test, y_pred, average='micro')
-                test_macro = f1_score(y_test, y_pred, average='macro')
+                test_micro = f1_score(y_test, y_pred, average="micro")
+                test_macro = f1_score(y_test, y_pred, average="macro")
 
-                y_val = y[split['valid']].detach().cpu().numpy()
-                y_pred = classifier(x[split['valid']]).argmax(-1).detach().cpu().numpy()
-                val_micro = f1_score(y_val, y_pred, average='micro')
+                y_val = y[split["valid"]].detach().cpu().numpy()
+                y_pred = classifier(x[split["valid"]]).argmax(-1).detach().cpu().numpy()
+                val_micro = f1_score(y_val, y_pred, average="micro")
 
                 if val_micro > best_val_micro:
                     best_val_micro = val_micro
@@ -111,9 +128,9 @@ class LREvaluator(BaseEvaluator):
                     best_accuracy = accuracy
 
         return {
-            'micro_f1': best_test_micro,
-            'macro_f1': best_test_macro,
-            'accuracy': best_accuracy
+            "micro_f1": best_test_micro,
+            "macro_f1": best_test_macro,
+            "accuracy": best_accuracy,
         }
 
 
@@ -157,7 +174,9 @@ class Encoder(torch.nn.Module):
 
         if "diffusion" in self.augmentor_name.lower():
             batch_size = 8192
-            clean_edge_index2, clean_edge_weight2 = remove_self_loops(edge_index2, edge_weight2)
+            clean_edge_index2, clean_edge_weight2 = remove_self_loops(
+                edge_index2, edge_weight2
+            )
             node_indices = torch.unique(clean_edge_index2)
             num_nodes = node_indices.shape[0]
             print("num nodes: ", num_nodes)
@@ -199,26 +218,34 @@ def test(encoder_model, data):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('augmentor', type=str)
-    parser.add_argument('dataset', type=str)
-    parser.add_argument('num_layers', type=int)
-    parser.add_argument('lr', type=float)
-    parser.add_argument('wd', type=float)
-    parser.add_argument('hidden_dim', type=int)
-    parser.add_argument('mode', type=str)
-    parser.add_argument('fraction1', type=float)
-    parser.add_argument('fraction2', type=float)
+    parser.add_argument("augmentor", type=str)
+    parser.add_argument("dataset", type=str)
+    parser.add_argument("num_layers", type=int)
+    parser.add_argument("lr", type=float)
+    parser.add_argument("wd", type=float)
+    parser.add_argument("hidden_dim", type=int)
+    parser.add_argument("mode", type=str)
+    parser.add_argument("fraction1", type=float)
+    parser.add_argument("fraction2", type=float)
     args = parser.parse_args()
     print(args)
 
-    device = torch.device('cuda')
-    path = osp.join(osp.expanduser('~'), 'datasets')
+    device = torch.device("cuda")
+    path = osp.join(osp.expanduser("~"), "datasets")
     datasets = {
-        "CORA": lambda: Planetoid(path, name='Cora', transform=T.NormalizeFeatures()),
-        "PUBMED": lambda: Planetoid(path, name='PubMed', transform=T.NormalizeFeatures()),
-        "COAUTHOR-CS": lambda: Coauthor(path, name="CS", transform=T.NormalizeFeatures()),
-        "COAUTHOR-PHY": lambda: Coauthor(path, name="Physics", transform=T.NormalizeFeatures()),
-        "AMAZON-PHOTO": lambda: Amazon(path, name='Photo', transform=T.NormalizeFeatures())
+        "CORA": lambda: Planetoid(path, name="Cora", transform=T.NormalizeFeatures()),
+        "PUBMED": lambda: Planetoid(
+            path, name="PubMed", transform=T.NormalizeFeatures()
+        ),
+        "COAUTHOR-CS": lambda: Coauthor(
+            path, name="CS", transform=T.NormalizeFeatures()
+        ),
+        "COAUTHOR-PHY": lambda: Coauthor(
+            path, name="Physics", transform=T.NormalizeFeatures()
+        ),
+        "AMAZON-PHOTO": lambda: Amazon(
+            path, name="Photo", transform=T.NormalizeFeatures()
+        ),
     }
 
     dataset = datasets[args.dataset]()
@@ -228,79 +255,187 @@ def main():
     fraction2 = args.fraction2
     augmentors = {
         "rLap": [
-            A.Compose([rLap(frac=fraction1, o_v="random", o_n="asc"), A.FeatureMasking(pf=0.3)]),
-            A.Compose([rLap(frac=fraction2, o_v="random", o_n="asc"), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [
+                    rLap(frac=fraction1, o_v="random", o_n="asc"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
+            A.Compose(
+                [
+                    rLap(frac=fraction2, o_v="random", o_n="asc"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
         ],
         "rLapRandomDesc": [
-            A.Compose([rLap(frac=fraction1, o_v="random", o_n="desc"), A.FeatureMasking(pf=0.3)]),
-            A.Compose([rLap(frac=fraction2, o_v="random", o_n="desc"), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [
+                    rLap(frac=fraction1, o_v="random", o_n="desc"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
+            A.Compose(
+                [
+                    rLap(frac=fraction2, o_v="random", o_n="desc"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
         ],
         "rLapRandomRandom": [
-            A.Compose([rLap(frac=fraction1, o_v="random", o_n="random"), A.FeatureMasking(pf=0.3)]),
-            A.Compose([rLap(frac=fraction2, o_v="random", o_n="random"), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [
+                    rLap(frac=fraction1, o_v="random", o_n="random"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
+            A.Compose(
+                [
+                    rLap(frac=fraction2, o_v="random", o_n="random"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
         ],
         "rLapDegree": [
-            A.Compose([rLap(frac=fraction1, o_v="degree", o_n="asc"), A.FeatureMasking(pf=0.3)]),
-            A.Compose([rLap(frac=fraction2, o_v="degree", o_n="asc"), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [
+                    rLap(frac=fraction1, o_v="degree", o_n="asc"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
+            A.Compose(
+                [
+                    rLap(frac=fraction2, o_v="degree", o_n="asc"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
         ],
         "rLapDegreeDesc": [
-            A.Compose([rLap(frac=fraction1, o_v="degree", o_n="desc"), A.FeatureMasking(pf=0.3)]),
-            A.Compose([rLap(frac=fraction2, o_v="degree", o_n="desc"), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [
+                    rLap(frac=fraction1, o_v="degree", o_n="desc"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
+            A.Compose(
+                [
+                    rLap(frac=fraction2, o_v="degree", o_n="desc"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
         ],
         "rLapDegreeRandom": [
-            A.Compose([rLap(frac=fraction1, o_v="degree", o_n="random"), A.FeatureMasking(pf=0.3)]),
-            A.Compose([rLap(frac=fraction2, o_v="degree", o_n="random"), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [
+                    rLap(frac=fraction1, o_v="degree", o_n="random"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
+            A.Compose(
+                [
+                    rLap(frac=fraction2, o_v="degree", o_n="random"),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
         ],
         "rLapCoarsen": [
             A.Compose([rLap(frac=fraction1, o_v="coarsen"), A.FeatureMasking(pf=0.3)]),
-            A.Compose([rLap(frac=fraction2, o_v="coarsen"), A.FeatureMasking(pf=0.3)])
+            A.Compose([rLap(frac=fraction2, o_v="coarsen"), A.FeatureMasking(pf=0.3)]),
         ],
         "EdgeAddition": [
             A.Compose([EdgeAdding(pe=fraction1), A.FeatureMasking(pf=0.3)]),
-            A.Compose([EdgeAdding(pe=fraction2), A.FeatureMasking(pf=0.3)])
+            A.Compose([EdgeAdding(pe=fraction2), A.FeatureMasking(pf=0.3)]),
         ],
         "EdgeDropping": [
             A.Compose([A.EdgeRemoving(pe=fraction1), A.FeatureMasking(pf=0.3)]),
-            A.Compose([A.EdgeRemoving(pe=fraction2), A.FeatureMasking(pf=0.3)])
+            A.Compose([A.EdgeRemoving(pe=fraction2), A.FeatureMasking(pf=0.3)]),
         ],
         "EdgeDroppingDegree": [
-            A.Compose([EdgeDroppingDegree(p=fraction1, threshold=0.7), A.FeatureMasking(pf=0.3)]),
-            A.Compose([EdgeDroppingDegree(p=fraction2, threshold=0.7), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [
+                    EdgeDroppingDegree(p=fraction1, threshold=0.7),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
+            A.Compose(
+                [
+                    EdgeDroppingDegree(p=fraction2, threshold=0.7),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
         ],
         "EdgeDroppingPR": [
-            A.Compose([EdgeDroppingPR(p=fraction1, threshold=0.7), A.FeatureMasking(pf=0.3)]),
-            A.Compose([EdgeDroppingPR(p=fraction2, threshold=0.7), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [EdgeDroppingPR(p=fraction1, threshold=0.7), A.FeatureMasking(pf=0.3)]
+            ),
+            A.Compose(
+                [EdgeDroppingPR(p=fraction2, threshold=0.7), A.FeatureMasking(pf=0.3)]
+            ),
         ],
         "EdgeDroppingEVC": [
-            A.Compose([EdgeDroppingEVC(p=fraction1, threshold=0.7), A.FeatureMasking(pf=0.3)]),
-            A.Compose([EdgeDroppingEVC(p=fraction2, threshold=0.7), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [EdgeDroppingEVC(p=fraction1, threshold=0.7), A.FeatureMasking(pf=0.3)]
+            ),
+            A.Compose(
+                [EdgeDroppingEVC(p=fraction2, threshold=0.7), A.FeatureMasking(pf=0.3)]
+            ),
         ],
         "NodeDropping": [
             A.Compose([A.NodeDropping(pn=fraction1), A.FeatureMasking(pf=0.3)]),
-            A.Compose([A.NodeDropping(pn=fraction2), A.FeatureMasking(pf=0.3)])
+            A.Compose([A.NodeDropping(pn=fraction2), A.FeatureMasking(pf=0.3)]),
         ],
         "RandomWalkSubgraph": [
             A.Compose([A.Identity(), A.FeatureMasking(pf=0.3)]),
-            A.Compose([A.RWSampling(num_seeds=int(fraction2*num_nodes), walk_length=10), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [
+                    A.RWSampling(num_seeds=int(fraction2 * num_nodes), walk_length=10),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
         ],
         "PPRDiffusion": [
             A.Compose([A.Identity(), A.FeatureMasking(pf=0.3)]),
-            A.Compose([A.PPRDiffusion(alpha=0.2, use_cache=True), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [A.PPRDiffusion(alpha=0.2, use_cache=True), A.FeatureMasking(pf=0.3)]
+            ),
         ],
         "MarkovDiffusion": [
             A.Compose([A.Identity(), A.FeatureMasking(pf=0.3)]),
-            A.Compose([A.MarkovDiffusion(alpha=0.2, use_cache=True), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [A.MarkovDiffusion(alpha=0.2, use_cache=True), A.FeatureMasking(pf=0.3)]
+            ),
         ],
         "rlapPPRDiffusion_8192": [
             A.Compose([A.Identity(), A.FeatureMasking(pf=0.3)]),
-            A.Compose([rLapPPRDiffusion(frac=fraction2, o_v="random", o_n="asc", refresh_cache_freq=200), A.FeatureMasking(pf=0.3)])
+            A.Compose(
+                [
+                    rLapPPRDiffusion(
+                        frac=fraction2, o_v="random", o_n="asc", refresh_cache_freq=200
+                    ),
+                    A.FeatureMasking(pf=0.3),
+                ]
+            ),
         ],
     }
     aug1, aug2 = augmentors[args.augmentor]
 
-    gconv1 = GConv(input_dim=dataset.num_features, hidden_dim=args.hidden_dim, num_layers=args.num_layers).to(device)
-    gconv2 = GConv(input_dim=dataset.num_features, hidden_dim=args.hidden_dim, num_layers=args.num_layers).to(device)
-    encoder_model = Encoder(encoder1=gconv1, encoder2=gconv2, augmentor=(aug1, aug2), augmentor_name=args.augmentor, hidden_dim=args.hidden_dim).to(device)
+    gconv1 = GConv(
+        input_dim=dataset.num_features,
+        hidden_dim=args.hidden_dim,
+        num_layers=args.num_layers,
+    ).to(device)
+    gconv2 = GConv(
+        input_dim=dataset.num_features,
+        hidden_dim=args.hidden_dim,
+        num_layers=args.num_layers,
+    ).to(device)
+    encoder_model = Encoder(
+        encoder1=gconv1,
+        encoder2=gconv2,
+        augmentor=(aug1, aug2),
+        augmentor_name=args.augmentor,
+        hidden_dim=args.hidden_dim,
+    ).to(device)
     contrast_model = DualBranchContrast(loss=JSD(), mode=args.mode).to(device)
 
     optimizer = Adam(encoder_model.parameters(), lr=args.lr, weight_decay=args.wd)
@@ -309,10 +444,10 @@ def main():
     current_tolerance = 0
     best_loss = 1e8
     best_epoch = 0
-    with tqdm(total=2000, desc='(T)') as pbar:
+    with tqdm(total=2000, desc="(T)") as pbar:
         for epoch in range(1, 2001):
             loss = train(encoder_model, contrast_model, data, optimizer)
-            pbar.set_postfix({'loss': loss})
+            pbar.set_postfix({"loss": loss})
             pbar.update()
             if loss < best_loss:
                 best_loss = loss
@@ -327,8 +462,10 @@ def main():
 
     for i in tqdm(range(10)):
         test_result = test(encoder_model, data)
-        print(f'Test run: {i} : Best test F1Mi={test_result["micro_f1"]:.4f}, F1Ma={test_result["macro_f1"]:.4f}, Acc={test_result["accuracy"]:.4f}')
+        print(
+            f'Test run: {i} : Best test F1Mi={test_result["micro_f1"]:.4f}, F1Ma={test_result["macro_f1"]:.4f}, Acc={test_result["accuracy"]:.4f}'
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

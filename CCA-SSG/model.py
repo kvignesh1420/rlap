@@ -42,12 +42,12 @@ class GCN(nn.Module):
         self.n_layers = n_layers
         self.convs = nn.ModuleList()
 
-        self.convs.append(GraphConv(in_dim, hid_dim, norm='both'))
+        self.convs.append(GraphConv(in_dim, hid_dim, norm="both"))
 
         if n_layers > 1:
             for i in range(n_layers - 2):
-                self.convs.append(GraphConv(hid_dim, hid_dim, norm='both'))
-            self.convs.append(GraphConv(hid_dim, out_dim, norm='both'))
+                self.convs.append(GraphConv(hid_dim, hid_dim, norm="both"))
+            self.convs.append(GraphConv(hid_dim, out_dim, norm="both"))
 
     def forward(self, graph, x):
 
@@ -57,8 +57,9 @@ class GCN(nn.Module):
 
         return x
 
+
 class CCA_SSG(nn.Module):
-    def __init__(self, in_dim, hid_dim, out_dim, n_layers, use_mlp = False):
+    def __init__(self, in_dim, hid_dim, out_dim, n_layers, use_mlp=False):
         super().__init__()
         if not use_mlp:
             self.backbone = GCN(in_dim, hid_dim, out_dim, n_layers)
@@ -77,4 +78,3 @@ class CCA_SSG(nn.Module):
         z2 = (h2 - h2.mean(0)) / h2.std(0)
 
         return z1, z2
-

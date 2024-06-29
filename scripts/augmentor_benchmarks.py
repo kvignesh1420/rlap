@@ -26,8 +26,7 @@ from torch_sparse import coalesce
 from torch_scatter import scatter
 import networkx as nx
 from torch_geometric.datasets import Planetoid, Coauthor, TUDataset, Amazon
-import numpy as np
-from rlap.python.api import ApproximateCholesky
+import rlap
 
 
 def coalesce_edge_index(edge_index: torch.Tensor, edge_weights=None):
@@ -76,20 +75,18 @@ class rLap(A.Augmentor):
     def augment(self, g):
         x, edge_index, edge_weights = g.unfold()
         num_nodes = edge_index.max().item() + 1
-        self.t = int(self.frac * num_nodes)
+        self.num_remove = int(self.frac * num_nodes)
         _edge_weights = edge_weights
         if _edge_weights is None:
             edge_weights = torch.ones((1, edge_index.shape[1])).to(edge_index.device)
         edge_info = torch.concat((edge_index, edge_weights), dim=0).t()
-        ac = ApproximateCholesky()
-        ac.setup(
+        sparse_edge_info = rlap.ops.approximate_cholesky(
             edge_info=edge_info.to("cpu"),
-            nrows=num_nodes,
-            ncols=num_nodes,
+            num_nodes=num_nodes,
+            num_remove=self.num_remove,
             o_v=self.o_v,
             o_n=self.o_n,
         )
-        sparse_edge_info = ac.get_schur_complement(self.t)
         sampled_edge_index = (
             torch.Tensor(sparse_edge_info[:, :2]).long().t().to(edge_index.device)
         )
@@ -97,7 +94,6 @@ class rLap(A.Augmentor):
         #  to incorporate edge-weight information (if needed).
 
         # sampled_edge_weights = torch.Tensor(sparse_edge_info[:,-1]).t().to(edge_index.device)
-        del ac
         del sparse_edge_info
         return A.Graph(x=x, edge_index=sampled_edge_index, edge_weights=None)
 
@@ -134,27 +130,25 @@ class rLapPPRDiffusion(A.Augmentor):
             return self._cache
         x, edge_index, edge_weights = g.unfold()
         num_nodes = edge_index.max().item() + 1
-        self.t = int(self.frac * num_nodes)
+        self.num_remove = int(self.frac * num_nodes)
         _edge_weights = edge_weights
         if _edge_weights is None:
             edge_weights = torch.ones((1, edge_index.shape[1])).to(edge_index.device)
         edge_info = torch.concat((edge_index, edge_weights), dim=0).t()
-        ac = ApproximateCholesky()
-        ac.setup(
+        sparse_edge_info = rlap.ops.approximate_cholesky(
             edge_info=edge_info.to("cpu"),
-            nrows=num_nodes,
-            ncols=num_nodes,
+            num_nodes=num_nodes,
+            num_remove=self.num_remove,
             o_v=self.o_v,
             o_n=self.o_n,
         )
-        sparse_edge_info = ac.get_schur_complement(self.t)
         sampled_edge_index = (
             torch.Tensor(sparse_edge_info[:, :2]).long().t().to(edge_index.device)
         )
         sampled_edge_weights = (
             torch.Tensor(sparse_edge_info[:, -1]).t().to(edge_index.device)
         )
-        del ac
+
         del sparse_edge_info
         sc_subgraph_nodes = torch.unique(sampled_edge_index, sorted=True)
         sc_subgraph_edge_index, sc_subgraph_edge_weights = subgraph(

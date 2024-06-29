@@ -43,6 +43,12 @@ $ pip install .
 
 The pytorch geometric implementation of the augmentor is based on the [PyGCL](https://github.com/PyGCL/PyGCL) library for reproducible experiments and is available in `augmentor_benchmarks.py`. Additionally, a DGL implementation is made available in `CCA-SSG/aug.py`.
 
+To run the following scripts, change the directory to:
+
+```bash
+$ cd scripts
+```
+
 ### Benchmarks
 
 Use the following shell script to benchmark all the augmentors on node and graph classification datasets

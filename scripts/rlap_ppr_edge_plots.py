@@ -1,6 +1,7 @@
 """
 Benchmark the resource consumption of graph augmentors.
 """
+
 from collections import defaultdict
 import torch
 import os.path as osp
@@ -23,14 +24,28 @@ if __name__ == "__main__":
 
     Path("plots").mkdir(parents=True, exist_ok=True)
     device = torch.device("cuda")
-    path = osp.join(osp.expanduser('~'), 'datasets')
+    path = osp.join(osp.expanduser("~"), "datasets")
     datasets = {
-        "COAUTHOR-CS": lambda: Coauthor(path, name="CS", transform=T.NormalizeFeatures()),
-        "COAUTHOR-PHY": lambda: Coauthor(path, name="Physics", transform=T.NormalizeFeatures()),
+        "COAUTHOR-CS": lambda: Coauthor(
+            path, name="CS", transform=T.NormalizeFeatures()
+        ),
+        "COAUTHOR-PHY": lambda: Coauthor(
+            path, name="Physics", transform=T.NormalizeFeatures()
+        ),
     }
 
     for fraction in [0.1, 0.2, 0.3, 0.4, 0.5]:
-        rlap_ppr_aug = A.Compose([rLapPPRDiffusion(frac=fraction, o_v="random", o_n="asc", refresh_cache_freq=200, use_cache=False)])
+        rlap_ppr_aug = A.Compose(
+            [
+                rLapPPRDiffusion(
+                    frac=fraction,
+                    o_v="random",
+                    o_n="asc",
+                    refresh_cache_freq=200,
+                    use_cache=False,
+                )
+            ]
+        )
         ppr_aug = A.Compose([A.PPRDiffusion(alpha=0.2, use_cache=False)])
         edge_counts = defaultdict(list)
         fig, ax = plt.subplots()
@@ -39,10 +54,14 @@ if __name__ == "__main__":
                 print(d_name, aug_name)
                 dataset = datasets[d_name]()
                 data = dataset[0].to(device)
-                x, edge_index, edge_weight = aug(data.x, data.edge_index, data.edge_weight)
+                x, edge_index, edge_weight = aug(
+                    data.x, data.edge_index, data.edge_weight
+                )
 
                 batch_size = 8192
-                clean_edge_index, clean_edge_weight = remove_self_loops(edge_index, edge_weight)
+                clean_edge_index, clean_edge_weight = remove_self_loops(
+                    edge_index, edge_weight
+                )
                 node_indices = torch.unique(clean_edge_index)
                 num_nodes = node_indices.shape[0]
                 print("num nodes: ", num_nodes)
@@ -56,7 +75,6 @@ if __name__ == "__main__":
                 label = "{}:{}".format(d_name, aug_name)
                 edge_counts[label].append(edge_index.shape[1])
 
-
         techniques = []
         means = []
         stds = []
@@ -67,12 +85,12 @@ if __name__ == "__main__":
 
         ind = np.arange(len(techniques))
         fig, ax = plt.subplots()
-        ax.bar(ind, means, align='center')
-        ax.set_ylabel('Edge count in sub-graph')
+        ax.bar(ind, means, align="center")
+        ax.set_ylabel("Edge count in sub-graph")
         ax.set_xticks(ind)
-        ax.set_xticklabels(techniques, rotation=45, ha='right')
+        ax.set_xticklabels(techniques, rotation=45, ha="right")
 
         plt.tight_layout()
-        plt.savefig('plots/ppr_rlapppr_edge_counts_frac_{}.png'.format(fraction))
+        plt.savefig("plots/ppr_rlapppr_edge_counts_frac_{}.png".format(fraction))
         plt.show()
         plt.clf()

@@ -6,10 +6,11 @@ import networkx as nx
 from GCL.augmentors import functional
 import numpy as np
 import dgl
-from rlap.python.api import ApproximateCholesky
+import rlap
 
 MARKOVD_CACHE = None
 PPRD_CACHE = None
+
 
 def random_aug(graph, x, feat_drop_rate, frac):
     n_node = graph.number_of_nodes()
@@ -28,7 +29,8 @@ def random_aug(graph, x, feat_drop_rate, frac):
 
     return ng, feat
 
-class rLap():
+
+class rLap:
     def __init__(self, frac, o_v="random", o_n="asc"):
         self.frac = frac
         self.o_v = o_v
@@ -37,23 +39,32 @@ class rLap():
     def augment(self, graph):
 
         num_nodes = graph.number_of_nodes()
-        self.t = int(self.frac * num_nodes)
+        self.num_remove = int(self.frac * num_nodes)
         edge_index = graph.edges()
         edge_weights = th.ones((1, edge_index[0].shape[0]))
-        edge_info = th.cat((edge_index[0].unsqueeze(0), edge_index[1].unsqueeze(0), edge_weights), dim=0).t()
-        ac = ApproximateCholesky()
-        ac.setup(edge_info=edge_info.to("cpu"), nrows=num_nodes, ncols=num_nodes, o_v=self.o_v, o_n=self.o_n)
+        edge_info = th.cat(
+            (edge_index[0].unsqueeze(0), edge_index[1].unsqueeze(0), edge_weights),
+            dim=0,
+        ).t()
 
-        sparse_edge_info = ac.get_schur_complement(self.t)
-        sampled_edge_index = th.Tensor(sparse_edge_info[:,:2]).long().t()
+        sparse_edge_info = rlap.ops.approximate_cholesky(
+            edge_info=edge_info.to("cpu"),
+            num_nodes=num_nodes,
+            num_remove=self.num_remove,
+            o_v=self.o_v,
+            o_n=self.o_n,
+        )
+
+        sampled_edge_index = th.Tensor(sparse_edge_info[:, :2]).long().t()
 
         ng = dgl.graph([])
         ng.add_nodes(num_nodes)
         ng.add_edges(sampled_edge_index[0], sampled_edge_index[1])
-        del ac
+
         del sparse_edge_info
 
         return ng
+
 
 def rlap_aug(graph, x, feat_drop_rate, frac):
 
@@ -63,15 +74,17 @@ def rlap_aug(graph, x, feat_drop_rate, frac):
 
     return ng, feat
 
+
 def drop_feature(x, drop_prob):
-    drop_mask = th.empty(
-        (x.size(1),),
-        dtype=th.float32,
-        device=x.device).uniform_(0, 1) < drop_prob
+    drop_mask = (
+        th.empty((x.size(1),), dtype=th.float32, device=x.device).uniform_(0, 1)
+        < drop_prob
+    )
     x = x.clone()
     x[:, drop_mask] = 0
 
     return x
+
 
 def mask_edge(graph, mask_prob):
     E = graph.number_of_edges()
@@ -87,9 +100,12 @@ def add_edge(edge_index, ratio):
     num_nodes = edge_index.max().item() + 1
     num_add = int(num_edges * ratio)
 
-    new_edge_index = th.randint(0, num_nodes - 1, size=(2, num_add)).to(edge_index.device)
+    new_edge_index = th.randint(0, num_nodes - 1, size=(2, num_add)).to(
+        edge_index.device
+    )
     edge_index = th.cat([edge_index, new_edge_index], dim=1)
     return edge_index
+
 
 def ea_aug(graph, x, feat_drop_rate, frac):
     n_node = graph.number_of_nodes()
@@ -107,6 +123,7 @@ def ea_aug(graph, x, feat_drop_rate, frac):
     ng.add_edges(nsrc, ndst)
     return ng, feat
 
+
 def nd_aug(graph, x, feat_drop_rate, frac):
     n_node = graph.number_of_nodes()
     feat = drop_feature(x, feat_drop_rate)
@@ -116,12 +133,15 @@ def nd_aug(graph, x, feat_drop_rate, frac):
     dst = graph.edges()[1]
     edge_index = th.cat((src.unsqueeze(0), dst.unsqueeze(0)), dim=0)
 
-    new_edge_index, _ = functional.drop_node(edge_index=edge_index, edge_weight=None, keep_prob=frac)
+    new_edge_index, _ = functional.drop_node(
+        edge_index=edge_index, edge_weight=None, keep_prob=frac
+    )
 
     nsrc = new_edge_index[0]
     ndst = new_edge_index[1]
     ng.add_edges(nsrc, ndst)
     return ng, feat
+
 
 def markovd_aug(graph, x, feat_drop_rate, frac):
     n_node = graph.number_of_nodes()
@@ -131,7 +151,7 @@ def markovd_aug(graph, x, feat_drop_rate, frac):
     src = graph.edges()[0]
     dst = graph.edges()[1]
     edge_index = th.cat((src.unsqueeze(0), dst.unsqueeze(0)), dim=0)
-    
+
     global MARKOVD_CACHE
     if MARKOVD_CACHE is not None:
         new_edge_index = MARKOVD_CACHE
@@ -146,6 +166,7 @@ def markovd_aug(graph, x, feat_drop_rate, frac):
     ng.add_edges(nsrc, ndst)
     return ng, feat
 
+
 def pprd_aug(graph, x, feat_drop_rate, frac):
     n_node = graph.number_of_nodes()
     feat = drop_feature(x, feat_drop_rate)
@@ -154,19 +175,18 @@ def pprd_aug(graph, x, feat_drop_rate, frac):
     src = graph.edges()[0]
     dst = graph.edges()[1]
     edge_index = th.cat((src.unsqueeze(0), dst.unsqueeze(0)), dim=0)
-    
+
     global PPRD_CACHE
     if PPRD_CACHE is not None:
         new_edge_index = PPRD_CACHE
     else:
-        PPRD_CACHE, _ = functional.compute_ppr(
-            edge_index, None, alpha=0.2, eps=1e-4
-        )
+        PPRD_CACHE, _ = functional.compute_ppr(edge_index, None, alpha=0.2, eps=1e-4)
         new_edge_index = PPRD_CACHE
     nsrc = new_edge_index[0]
     ndst = new_edge_index[1]
     ng.add_edges(nsrc, ndst)
     return ng, feat
+
 
 def rws_aug(graph, x, feat_drop_rate, frac):
     n_node = graph.number_of_nodes()
@@ -177,8 +197,9 @@ def rws_aug(graph, x, feat_drop_rate, frac):
     dst = graph.edges()[1]
     edge_index = th.cat((src.unsqueeze(0), dst.unsqueeze(0)), dim=0)
 
-    new_edge_index, _ =  functional.random_walk_subgraph(
-        edge_index, None, batch_size=int(frac*n_node))
+    new_edge_index, _ = functional.random_walk_subgraph(
+        edge_index, None, batch_size=int(frac * n_node)
+    )
     nsrc = new_edge_index[0]
     ndst = new_edge_index[1]
     ng.add_edges(nsrc, ndst)
@@ -188,15 +209,16 @@ def rws_aug(graph, x, feat_drop_rate, frac):
 def compute_pr(edge_index, damp: float = 0.85, k: int = 10):
     num_nodes = edge_index.max().item() + 1
     deg_out = degree(edge_index[0])
-    x = th.ones((num_nodes, )).to(edge_index.device).to(th.float32)
+    x = th.ones((num_nodes,)).to(edge_index.device).to(th.float32)
 
     for i in range(k):
         edge_msg = x[edge_index[0]] / deg_out[edge_index[0]]
-        agg_msg = scatter(edge_msg, edge_index[1], reduce='sum')
+        agg_msg = scatter(edge_msg, edge_index[1], reduce="sum")
 
         x = (1 - damp) * x + damp * agg_msg
 
     return x
+
 
 def eigenvector_centrality(data):
     graph = to_networkx(data)
@@ -205,10 +227,12 @@ def eigenvector_centrality(data):
     return th.tensor(x, dtype=th.float32).to(data.edge_index.device)
 
 
-def drop_edge_weighted(edge_index, edge_weights, p: float, threshold: float = 1.):
+def drop_edge_weighted(edge_index, edge_weights, p: float, threshold: float = 1.0):
     edge_weights = edge_weights / edge_weights.mean() * p
-    edge_weights = edge_weights.where(edge_weights < threshold, th.ones_like(edge_weights) * threshold)
-    sel_mask = th.bernoulli(1. - edge_weights).to(th.bool)
+    edge_weights = edge_weights.where(
+        edge_weights < threshold, th.ones_like(edge_weights) * threshold
+    )
+    sel_mask = th.bernoulli(1.0 - edge_weights).to(th.bool)
 
     return sel_mask
 
@@ -223,17 +247,17 @@ def degree_drop_weights(edge_index):
     return weights
 
 
-def pr_drop_weights(edge_index, aggr: str = 'sink', k: int = 10):
+def pr_drop_weights(edge_index, aggr: str = "sink", k: int = 10):
     pv = compute_pr(edge_index, k=k)
     pv_row = pv[edge_index[0]].to(th.float32)
     pv_col = pv[edge_index[1]].to(th.float32)
     s_row = th.log(pv_row)
     s_col = th.log(pv_col)
-    if aggr == 'sink':
+    if aggr == "sink":
         s = s_col
-    elif aggr == 'source':
+    elif aggr == "source":
         s = s_row
-    elif aggr == 'mean':
+    elif aggr == "mean":
         s = (s_col + s_row) * 0.5
     else:
         s = s_col
@@ -254,6 +278,7 @@ def evc_drop_weights(data):
 
     return (s.max() - s) / (s.max() - s.mean())
 
+
 def ed_deg_aug(graph, x, feat_drop_rate, frac):
     n_node = graph.number_of_nodes()
     feat = drop_feature(x, feat_drop_rate)
@@ -265,10 +290,7 @@ def ed_deg_aug(graph, x, feat_drop_rate, frac):
 
     drop_weights = degree_drop_weights(edge_index=edge_index)
     mask = drop_edge_weighted(
-        edge_index=edge_index,
-        edge_weights=drop_weights,
-        p=frac,
-        threshold=0.7
+        edge_index=edge_index, edge_weights=drop_weights, p=frac, threshold=0.7
     )
     new_edge_index = edge_index[:, mask]
 
@@ -276,6 +298,7 @@ def ed_deg_aug(graph, x, feat_drop_rate, frac):
     ndst = new_edge_index[1]
     ng.add_edges(nsrc, ndst)
     return ng, feat
+
 
 def ed_ppr_aug(graph, x, feat_drop_rate, frac):
     n_node = graph.number_of_nodes()
@@ -288,10 +311,7 @@ def ed_ppr_aug(graph, x, feat_drop_rate, frac):
 
     drop_weights = pr_drop_weights(edge_index=edge_index)
     mask = drop_edge_weighted(
-        edge_index=edge_index,
-        edge_weights=drop_weights,
-        p=frac,
-        threshold=0.7
+        edge_index=edge_index, edge_weights=drop_weights, p=frac, threshold=0.7
     )
     new_edge_index = edge_index[:, mask]
 
@@ -299,6 +319,7 @@ def ed_ppr_aug(graph, x, feat_drop_rate, frac):
     ndst = new_edge_index[1]
     ng.add_edges(nsrc, ndst)
     return ng, feat
+
 
 def ed_evc_aug(graph, x, feat_drop_rate, frac):
     n_node = graph.number_of_nodes()
@@ -312,10 +333,7 @@ def ed_evc_aug(graph, x, feat_drop_rate, frac):
     data = Data(x=x, edge_index=edge_index, edge_weights=None).to(device)
     drop_weights = evc_drop_weights(data=data)
     mask = drop_edge_weighted(
-        edge_index=edge_index,
-        edge_weights=drop_weights,
-        p=frac,
-        threshold=0.7
+        edge_index=edge_index, edge_weights=drop_weights, p=frac, threshold=0.7
     )
     new_edge_index = edge_index[:, mask]
 

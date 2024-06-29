@@ -5,30 +5,31 @@ from dgl.data import CoraGraphDataset, CiteseerGraphDataset, PubmedGraphDataset
 from dgl.data import AmazonCoBuyPhotoDataset, AmazonCoBuyComputerDataset
 from dgl.data import CoauthorCSDataset, CoauthorPhysicsDataset
 
+
 def load(name):
-    if name == 'cora':
+    if name == "cora":
         dataset = CoraGraphDataset()
-    elif name == 'citeseer':
+    elif name == "citeseer":
         dataset = CiteseerGraphDataset()
-    elif name == 'pubmed':
+    elif name == "pubmed":
         dataset = PubmedGraphDataset()
-    elif name == 'photo':
+    elif name == "photo":
         dataset = AmazonCoBuyPhotoDataset()
-    elif name == 'comp':
+    elif name == "comp":
         dataset = AmazonCoBuyComputerDataset()
-    elif name == 'cs':
+    elif name == "cs":
         dataset = CoauthorCSDataset()
-    elif name == 'physics':
+    elif name == "physics":
         dataset = CoauthorPhysicsDataset()
 
     graph = dataset[0]
-    citegraph = ['cora', 'citeseer', 'pubmed']
-    cograph = ['photo', 'comp', 'cs', 'physics']
+    citegraph = ["cora", "citeseer", "pubmed"]
+    cograph = ["photo", "comp", "cs", "physics"]
 
     if name in citegraph:
-        train_mask = graph.ndata.pop('train_mask')
-        val_mask = graph.ndata.pop('val_mask')
-        test_mask = graph.ndata.pop('test_mask')
+        train_mask = graph.ndata.pop("train_mask")
+        val_mask = graph.ndata.pop("val_mask")
+        test_mask = graph.ndata.pop("test_mask")
 
         train_idx = th.nonzero(train_mask, as_tuple=False).squeeze()
         val_idx = th.nonzero(val_mask, as_tuple=False).squeeze()
@@ -55,7 +56,7 @@ def load(name):
         test_idx = th.tensor(test_idx)
 
     num_class = dataset.num_classes
-    feat = graph.ndata.pop('feat')
-    labels = graph.ndata.pop('label')
+    feat = graph.ndata.pop("feat")
+    labels = graph.ndata.pop("label")
 
     return graph, feat, labels, num_class, train_idx, val_idx, test_idx
