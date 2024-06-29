@@ -1,8 +1,8 @@
 #ifndef RLAP_CC_READER_H
 #define RLAP_CC_READER_H
 
-#include "third_party/eigen3/Eigen/Core"
-#include "third_party/eigen3/Eigen/SparseCore"
+#include <Eigen/Core>
+#include <Eigen/SparseCore>
 #include <string>
 
 class Reader{
@@ -14,21 +14,21 @@ class Reader{
 class TSVReader : public Reader{
   public:
     // A reader to parse tsv files and prepare the adjacency matrix
-    TSVReader(std::string filename, int nrows, int ncols);
+    TSVReader(std::string filename, int64_t nrows, int64_t ncols);
     Eigen::SparseMatrix<double>* Read() override;
   private:
     std::string _filename;
-    int _nrows, _ncols;
+    int64_t _nrows, _ncols;
 };
 
 class EdgeInfoMatrixReader : public Reader{
   public:
     // A reader to prepare the adjacency matrix from (row, col, wt) entries
-    EdgeInfoMatrixReader(Eigen::MatrixXd edge_info, int nrows, int ncols);
+    EdgeInfoMatrixReader(Eigen::MatrixXd edge_info, int64_t nrows, int64_t ncols);
     Eigen::SparseMatrix<double>* Read() override;
   private:
     Eigen::MatrixXd _edge_info;
-    int _nrows, _ncols;
+    int64_t _nrows, _ncols;
 };
 
 #endif

@@ -1,9 +1,9 @@
 #ifndef RLAP_CC_FACTORIZERS_H
 #define RLAP_CC_FACTORIZERS_H
 
-#include "third_party/eigen3/Eigen/SparseCore"
-#include "third_party/eigen3/Eigen/SparseCholesky"
-#include "third_party/eigen3/Eigen/Core"
+#include <Eigen/SparseCore>
+#include <Eigen/SparseCholesky>
+#include <Eigen/Core>
 #include <vector>
 #include <string>
 #include "preconditioner.h"
@@ -31,14 +31,14 @@ class ApproximateCholesky: public Factorizer{
     };
     // Allow the user to pass a N x 3 matrix of (row, col, wt) entries of the
     // adjacency matrix and configure the state on demand via the `setup` method.
-    void setup(Eigen::MatrixXd edge_info, int nrows, int ncols, std::string o_v = "random",  std::string o_n = "asc");
+    void setup(Eigen::MatrixXd edge_info, int64_t nrows, int64_t ncols, std::string o_v = "random",  std::string o_n = "asc");
     // retrieve the adjancency matrix. helpful if factorizer was
     // initialized with a filename and dimension
     Eigen::SparseMatrix<double> getAdjacencyMatrix();
     // retrive the computed laplacian
     Eigen::SparseMatrix<double> getLaplacian() override;
     // retrieve the schur complements after eliminating 't' nodes
-    Eigen::MatrixXd getSchurComplement(int t);
+    Eigen::MatrixXd getSchurComplement(int64_t t);
   private:
     Preconditioner* _prec = nullptr;
     Eigen::SparseMatrix<double>* _A = nullptr;

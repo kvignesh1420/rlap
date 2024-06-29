@@ -5,7 +5,7 @@
 #include <random>
 #include <stdexcept>
 #include <string>
-#include "third_party/eigen3/Eigen/SparseCore"
+#include <Eigen/SparseCore>
 #include "preconditioner.h"
 #include "types.h"
 #include "tracer.h"
@@ -23,13 +23,13 @@ std::vector<double> PriorityPreconditioner::getFlipIndices(Eigen::SparseMatrix<d
     Eigen::SparseMatrix<double> F = Eigen::SparseMatrix<double>(M->rows(), M->cols());
     std::vector<Eigen::Triplet<double> > triplets;
 
-    int n = M->rows();
+    int64_t n = M->rows();
     double counter = 0;
-    for(int coln = 0; coln < n; coln++){
-        int start_idx = M->outerIndexPtr()[coln];
-        int end_idx = M->outerIndexPtr()[coln+1];
-        for(int ind = start_idx ; ind < end_idx; ind++){
-            int rown  = M->innerIndexPtr()[ind];
+    for(int64_t coln = 0; coln < n; coln++){
+        int64_t start_idx = M->outerIndexPtr()[coln];
+        int64_t end_idx = M->outerIndexPtr()[coln+1];
+        for(int64_t ind = start_idx ; ind < end_idx; ind++){
+            int64_t rown  = M->innerIndexPtr()[ind];
             triplets.push_back(Eigen::Triplet<double>(rown, coln, counter));
             counter += 1;
         }
@@ -38,10 +38,10 @@ std::vector<double> PriorityPreconditioner::getFlipIndices(Eigen::SparseMatrix<d
 
     Eigen::SparseMatrix<double> F_t = F.transpose();
     std::vector<double> flipped_indices;
-    for(int coln = 0; coln < n; coln++){
-        int start_idx = F_t.outerIndexPtr()[coln];
-        int end_idx = F_t.outerIndexPtr()[coln+1];
-        for(int ind = start_idx ; ind < end_idx; ind++){
+    for(int64_t coln = 0; coln < n; coln++){
+        int64_t start_idx = F_t.outerIndexPtr()[coln];
+        int64_t end_idx = F_t.outerIndexPtr()[coln+1];
+        for(int64_t ind = start_idx ; ind < end_idx; ind++){
             flipped_indices.push_back(F_t.valuePtr()[ind]);
         }
     }
@@ -50,7 +50,7 @@ std::vector<double> PriorityPreconditioner::getFlipIndices(Eigen::SparseMatrix<d
 
 void PriorityPreconditioner::printFlipIndices(std::vector<double> fi){
     std::cout << "flip indices = " << std::endl;
-    for(int i = 0; i < fi.size(); i++){
+    for(int64_t i = 0; i < fi.size(); i++){
         double val = fi.at(i);
         if(i != fi.at(val)){
             std::cout << "flip index mismatch: " << i << " " << val << std::endl;
@@ -64,15 +64,15 @@ void PriorityPreconditioner::printFlipIndices(std::vector<double> fi){
 
 PriorityMatrix* PriorityPreconditioner::getPriorityMatrix(){
 
-    int n = _A->rows();
+    int64_t n = _A->rows();
     std::vector<PriorityElement*> cols;
     std::vector<PriorityElement*> llelems;
     std::vector<double> degs;
     std::vector<double> flips = getFlipIndices(_A);
 
-    for(int i = 0; i < n; i++){
-        int start_idx = _A->outerIndexPtr()[i];
-        int end_idx = _A->outerIndexPtr()[i+1];
+    for(int64_t i = 0; i < n; i++){
+        int64_t start_idx = _A->outerIndexPtr()[i];
+        int64_t end_idx = _A->outerIndexPtr()[i+1];
         double deg = end_idx - start_idx;
         degs.push_back(deg);
         if(deg == 0){
@@ -87,7 +87,7 @@ PriorityMatrix* PriorityPreconditioner::getPriorityMatrix(){
         llelems.push_back(pe);
         PriorityElement* next = pe;
 
-        for(int ind = start_idx + 1; ind < end_idx; ind++){
+        for(int64_t ind = start_idx + 1; ind < end_idx; ind++){
             j = _A->innerIndexPtr()[ind];
             v = _A->valuePtr()[ind];
             PriorityElement* pe = new PriorityElement(j, v, next);
@@ -97,10 +97,10 @@ PriorityMatrix* PriorityPreconditioner::getPriorityMatrix(){
         cols.push_back(next);
     }
 
-    for(int i = 0; i < n; i++){
-        int start_idx = _A->outerIndexPtr()[i];
-        int end_idx = _A->outerIndexPtr()[i+1];
-        for(int ind = start_idx; ind < end_idx; ind++){
+    for(int64_t i = 0; i < n; i++){
+        int64_t start_idx = _A->outerIndexPtr()[i];
+        int64_t end_idx = _A->outerIndexPtr()[i+1];
+        for(int64_t ind = start_idx; ind < end_idx; ind++){
             llelems.at(ind)->reverse = llelems.at(flips.at(ind));
         }
     }
@@ -113,7 +113,7 @@ PriorityMatrix* PriorityPreconditioner::getPriorityMatrix(){
     return pmat;
 }
 
-void PriorityPreconditioner::printColumn(PriorityMatrix* pmat, int i){
+void PriorityPreconditioner::printColumn(PriorityMatrix* pmat, int64_t i){
     PriorityElement* ll = pmat->cols.at(i);
     std::cout << "col " << i << " row " << ll->row << " value " << ll->val << std::endl;
     while(ll->next!=ll){
@@ -125,16 +125,16 @@ void PriorityPreconditioner::printColumn(PriorityMatrix* pmat, int i){
 DegreePQ* PriorityPreconditioner::getDegreePQ(std::vector<double> degs){
     double n = degs.size();
     std::vector<DegreePQElement*> elems;
-    for(int i = 0; i < n; i++){
+    for(int64_t i = 0; i < n; i++){
         elems.push_back(nullptr);
     }
     std::vector<double> lists;
-    for(int i = 0; i < 2*n + 1; i++){
+    for(int64_t i = 0; i < 2*n + 1; i++){
         lists.push_back(-1);
     }
     double minlist = 0;
 
-    for(int i = 0; i < n; i++){
+    for(int64_t i = 0; i < n; i++){
         double key = degs.at(i);
         double head = lists.at(key);
 
@@ -189,7 +189,7 @@ double PriorityPreconditioner::DegreePQPop(DegreePQ* pq){
     return i;
 }
 
-void PriorityPreconditioner::DegreePQMove(DegreePQ* pq, int i, double newkey, int oldlist, int newlist){
+void PriorityPreconditioner::DegreePQMove(DegreePQ* pq, int64_t i, double newkey, int64_t oldlist, int64_t newlist){
 
     double prev = pq->elems.at(i)->prev;
     double next = pq->elems.at(i)->next;
@@ -213,14 +213,14 @@ void PriorityPreconditioner::DegreePQMove(DegreePQ* pq, int i, double newkey, in
     return;
 }
 
-void PriorityPreconditioner::DegreePQDec(DegreePQ* pq, int i){
+void PriorityPreconditioner::DegreePQDec(DegreePQ* pq, int64_t i){
     double n = pq->n;
     double deg_i = pq->elems.at(i)->key;
     if(deg_i == 1){
         return;
     }
-    int oldlist = deg_i <= n ? deg_i : n + int(deg_i/n);
-    int newlist = deg_i-1 <= n ? deg_i-1 : n + int((deg_i-1)/n);
+    int64_t oldlist = deg_i <= n ? deg_i : n + int(deg_i/n);
+    int64_t newlist = deg_i-1 <= n ? deg_i-1 : n + int((deg_i-1)/n);
     if(oldlist != newlist){
         DegreePQMove(pq, i, deg_i-1, oldlist, newlist);
         if(newlist < pq->minlist){
@@ -232,11 +232,11 @@ void PriorityPreconditioner::DegreePQDec(DegreePQ* pq, int i){
     return;
 }
 
-void PriorityPreconditioner::DegreePQInc(DegreePQ* pq, int i){
+void PriorityPreconditioner::DegreePQInc(DegreePQ* pq, int64_t i){
     double n = pq->n;
     double deg_i = pq->elems.at(i)->key;
-    int oldlist = deg_i <= n ? deg_i : n + int(deg_i/n);
-    int newlist = deg_i+1 <= n ? deg_i+1 : n + int((deg_i+1)/n);
+    int64_t oldlist = deg_i <= n ? deg_i : n + int(deg_i/n);
+    int64_t newlist = deg_i+1 <= n ? deg_i+1 : n + int((deg_i+1)/n);
     if(oldlist != newlist){
         DegreePQMove(pq, i, deg_i+1, oldlist, newlist);
     }else{
@@ -245,7 +245,7 @@ void PriorityPreconditioner::DegreePQInc(DegreePQ* pq, int i){
     return;
 }
 
-double PriorityPreconditioner::getColumnLength(PriorityMatrix* pmat, int i, std::vector<PriorityElement*>* colspace){
+double PriorityPreconditioner::getColumnLength(PriorityMatrix* pmat, int64_t i, std::vector<PriorityElement*>* colspace){
     PriorityElement* ll = pmat->cols[i];
     double len = 0;
     while(ll->next != ll){
@@ -278,7 +278,7 @@ double PriorityPreconditioner::compressColumn(std::vector<PriorityElement*>* col
     double ptr = PTR_RESET;
     double currow = -1;
 
-    for(int i = 0; i < len; i++){
+    for(int64_t i = 0; i < len; i++){
         if(colspace->at(i)->row != currow){
             currow = colspace->at(i)->row;
             ptr += 1;
@@ -301,7 +301,9 @@ double PriorityPreconditioner::compressColumn(std::vector<PriorityElement*>* col
          [](PriorityElement* j, PriorityElement* k) {return j->val > k->val; });
     }
     else if (_o_n_str == "random"){
-        std::random_shuffle ( colspace->begin(), colspace->begin()+ptr+1 );
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::shuffle ( colspace->begin(), colspace->begin()+ptr+1, gen );
     }
 
     return ptr+1;
@@ -315,7 +317,7 @@ double PriorityPreconditioner::compressColumnSC(std::vector<PriorityElement*>* c
     double ptr = PTR_RESET;
     double currow = -1;
 
-    for(int i = 0; i < len; i++){
+    for(int64_t i = 0; i < len; i++){
         if(colspace->at(i)->row != currow){
             currow = colspace->at(i)->row;
             ptr += 1;
@@ -335,13 +337,15 @@ double PriorityPreconditioner::compressColumnSC(std::vector<PriorityElement*>* c
          [](PriorityElement* j, PriorityElement* k) {return j->val > k->val; });
     }
     else if (_o_n_str == "random"){
-        std::random_shuffle ( colspace->begin(), colspace->begin()+ptr+1 );
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::shuffle ( colspace->begin(), colspace->begin()+ptr+1, gen );
     }
     return ptr+1;
 }
 
 
-Eigen::MatrixXd PriorityPreconditioner::getSchurComplement(int t){
+Eigen::MatrixXd PriorityPreconditioner::getSchurComplement(int64_t t){
     PriorityMatrix* a = getPriorityMatrix();
     double n = a->n;
 
@@ -362,7 +366,7 @@ Eigen::MatrixXd PriorityPreconditioner::getSchurComplement(int t){
         double csum = 0;
         std::vector<double> cumspace;
         std::vector<double> vals;
-        for(int ii = 0; ii < len ; ii++){
+        for(int64_t ii = 0; ii < len ; ii++){
             vals.push_back(colspace->at(ii)->val);
             csum += colspace->at(ii)->val;
             cumspace.push_back(csum);
@@ -370,7 +374,7 @@ Eigen::MatrixXd PriorityPreconditioner::getSchurComplement(int t){
         double wdeg = csum;
         double colScale = 1;
 
-        for(int joffset = 0; joffset < len-1; joffset++){
+        for(int64_t joffset = 0; joffset < len-1; joffset++){
             PriorityElement* ll = colspace->at(joffset);
             double w = vals.at(joffset) * colScale;
             double j = ll->row;
@@ -381,7 +385,7 @@ Eigen::MatrixXd PriorityPreconditioner::getSchurComplement(int t){
             double u_r = u_distribution(rand_generator);
             double r = u_r*(csum  - cumspace[joffset]) + cumspace[joffset];
             double koff = len-1;
-            for(int k_i = 0; k_i < len; k_i++){
+            for(int64_t k_i = 0; k_i < len; k_i++){
                 if(cumspace[k_i]>r){
                     koff = k_i;
                     break;
@@ -432,14 +436,14 @@ Eigen::MatrixXd PriorityPreconditioner::getSchurComplement(int t){
     Eigen::MatrixXd edge_info;
 
 
-    int edge_info_counter = 0;
+    int64_t edge_info_counter = 0;
     while (pq->nitems > 0){
         double i = DegreePQPop(pq);
         double len = getColumnLength(a, i, colspace);
 
         len = compressColumnSC(colspace, len, pq);
 
-        for(int ii = 0; ii < len ; ii++){
+        for(int64_t ii = 0; ii < len ; ii++){
             double val = colspace->at(ii)->val;
             double row = colspace->at(ii)->row;
             Eigen::Vector3d temp(row, i, val);
@@ -448,7 +452,7 @@ Eigen::MatrixXd PriorityPreconditioner::getSchurComplement(int t){
         }
     }
     edge_info.resize(edge_info_counter, 3);
-    for(int z = 0; z < edge_info_counter; z++){
+    for(int64_t z = 0; z < edge_info_counter; z++){
         edge_info.row(z) = edge_info_vector[z];
     }
 
@@ -483,13 +487,13 @@ std::vector<double> RandomPreconditioner::getFlipIndices(Eigen::SparseMatrix<dou
     Eigen::SparseMatrix<double> F = Eigen::SparseMatrix<double>(M->rows(), M->cols());
     std::vector<Eigen::Triplet<double> > triplets;
 
-    int n = M->rows();
+    int64_t n = M->rows();
     double counter = 0;
-    for(int coln = 0; coln < n; coln++){
-        int start_idx = M->outerIndexPtr()[coln];
-        int end_idx = M->outerIndexPtr()[coln+1];
-        for(int ind = start_idx ; ind < end_idx; ind++){
-            int rown  = M->innerIndexPtr()[ind];
+    for(int64_t coln = 0; coln < n; coln++){
+        int64_t start_idx = M->outerIndexPtr()[coln];
+        int64_t end_idx = M->outerIndexPtr()[coln+1];
+        for(int64_t ind = start_idx ; ind < end_idx; ind++){
+            int64_t rown  = M->innerIndexPtr()[ind];
             triplets.push_back(Eigen::Triplet<double>(rown, coln, counter));
             counter += 1;
         }
@@ -497,10 +501,10 @@ std::vector<double> RandomPreconditioner::getFlipIndices(Eigen::SparseMatrix<dou
     F.setFromTriplets(triplets.begin(), triplets.end());
     Eigen::SparseMatrix<double> F_t = F.transpose();
     std::vector<double> flipped_indices;
-    for(int coln = 0; coln < n; coln++){
-        int start_idx = F_t.outerIndexPtr()[coln];
-        int end_idx = F_t.outerIndexPtr()[coln+1];
-        for(int ind = start_idx ; ind < end_idx; ind++){
+    for(int64_t coln = 0; coln < n; coln++){
+        int64_t start_idx = F_t.outerIndexPtr()[coln];
+        int64_t end_idx = F_t.outerIndexPtr()[coln+1];
+        for(int64_t ind = start_idx ; ind < end_idx; ind++){
             flipped_indices.push_back(F_t.valuePtr()[ind]);
         }
     }
@@ -509,7 +513,7 @@ std::vector<double> RandomPreconditioner::getFlipIndices(Eigen::SparseMatrix<dou
 
 void RandomPreconditioner::printFlipIndices(std::vector<double> fi){
     std::cout << "flip indices = " << std::endl;
-    for(int i = 0; i < fi.size(); i++){
+    for(int64_t i = 0; i < fi.size(); i++){
         double val = fi.at(i);
         if(i != fi.at(val)){
             std::cout << "flip index mismatch: " << i << " " << val << std::endl;
@@ -523,15 +527,15 @@ void RandomPreconditioner::printFlipIndices(std::vector<double> fi){
 
 PriorityMatrix* RandomPreconditioner::getPriorityMatrix(){
 
-    int n = _A->rows();
+    int64_t n = _A->rows();
     std::vector<PriorityElement*> cols;
     std::vector<PriorityElement*> llelems;
     std::vector<double> degs;
     std::vector<double> flips = getFlipIndices(_A);
 
-    for(int i = 0; i < n; i++){
-        int start_idx = _A->outerIndexPtr()[i];
-        int end_idx = _A->outerIndexPtr()[i+1];
+    for(int64_t i = 0; i < n; i++){
+        int64_t start_idx = _A->outerIndexPtr()[i];
+        int64_t end_idx = _A->outerIndexPtr()[i+1];
         double deg = end_idx - start_idx;
         degs.push_back(deg);
         if(deg == 0){
@@ -546,7 +550,7 @@ PriorityMatrix* RandomPreconditioner::getPriorityMatrix(){
         llelems.push_back(pe);
         PriorityElement* next = pe;
 
-        for(int ind = start_idx + 1; ind < end_idx; ind++){
+        for(int64_t ind = start_idx + 1; ind < end_idx; ind++){
             j = _A->innerIndexPtr()[ind];
             v = _A->valuePtr()[ind];
             PriorityElement* pe = new PriorityElement(j, v, next);
@@ -556,10 +560,10 @@ PriorityMatrix* RandomPreconditioner::getPriorityMatrix(){
         cols.push_back(next);
     }
 
-    for(int i = 0; i < n; i++){
-        int start_idx = _A->outerIndexPtr()[i];
-        int end_idx = _A->outerIndexPtr()[i+1];
-        for(int ind = start_idx; ind < end_idx; ind++){
+    for(int64_t i = 0; i < n; i++){
+        int64_t start_idx = _A->outerIndexPtr()[i];
+        int64_t end_idx = _A->outerIndexPtr()[i+1];
+        for(int64_t ind = start_idx; ind < end_idx; ind++){
             llelems.at(ind)->reverse = llelems.at(flips.at(ind));
         }
     }
@@ -572,7 +576,7 @@ PriorityMatrix* RandomPreconditioner::getPriorityMatrix(){
     return pmat;
 }
 
-void RandomPreconditioner::printColumn(PriorityMatrix* pmat, int i){
+void RandomPreconditioner::printColumn(PriorityMatrix* pmat, int64_t i){
     PriorityElement* ll = pmat->cols.at(i);
     std::cout << "col " << i << " row " << ll->row << " value " << ll->val << std::endl;
     while(ll->next!=ll){
@@ -584,10 +588,12 @@ void RandomPreconditioner::printColumn(PriorityMatrix* pmat, int i){
 RandomPQ* RandomPreconditioner::getRandomPQ(std::vector<double> degs){
     double n = degs.size();
     std::vector<double> node_id;
-    for(int i = 0; i < n; i++){
+    for(int64_t i = 0; i < n; i++){
         node_id.push_back(i);
     }
-    std::random_shuffle ( node_id.begin(), node_id.end() );
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::shuffle ( node_id.begin(), node_id.end(), gen );
     RandomPQ* pq = new RandomPQ();
     pq->node_id = node_id;
     pq->nitems = n;
@@ -607,7 +613,7 @@ double RandomPreconditioner::RandomPQPop(RandomPQ* pq){
 }
 
 
-double RandomPreconditioner::getColumnLength(PriorityMatrix* pmat, int i, std::vector<PriorityElement*>* colspace){
+double RandomPreconditioner::getColumnLength(PriorityMatrix* pmat, int64_t i, std::vector<PriorityElement*>* colspace){
     PriorityElement* ll = pmat->cols[i];
     double len = 0;
     while(ll->next != ll){
@@ -640,7 +646,7 @@ double RandomPreconditioner::compressColumn(std::vector<PriorityElement*>* colsp
     double ptr = PTR_RESET;
     double currow = -1;
 
-    for(int i = 0; i < len; i++){
+    for(int64_t i = 0; i < len; i++){
         if(colspace->at(i)->row != currow){
 
             currow = colspace->at(i)->row;
@@ -662,7 +668,9 @@ double RandomPreconditioner::compressColumn(std::vector<PriorityElement*>* colsp
          [](PriorityElement* j, PriorityElement* k) {return j->val > k->val; });
     }
     else if (_o_n_str == "random"){
-        std::random_shuffle ( colspace->begin(), colspace->begin()+ptr+1 );
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::shuffle ( colspace->begin(), colspace->begin()+ptr+1, gen );
     }
     return ptr+1;
 }
@@ -675,7 +683,7 @@ double RandomPreconditioner::compressColumnSC(std::vector<PriorityElement*>* col
     double ptr = PTR_RESET;
     double currow = -1;
 
-    for(int i = 0; i < len; i++){
+    for(int64_t i = 0; i < len; i++){
         if(colspace->at(i)->row != currow){
             currow = colspace->at(i)->row;
             ptr += 1;
@@ -695,12 +703,14 @@ double RandomPreconditioner::compressColumnSC(std::vector<PriorityElement*>* col
          [](PriorityElement* j, PriorityElement* k) {return j->val > k->val; });
     }
     else if (_o_n_str == "random"){
-        std::random_shuffle ( colspace->begin(), colspace->begin()+ptr+1 );
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::shuffle ( colspace->begin(), colspace->begin()+ptr+1, gen );
     }
     return ptr+1;
 }
 
-Eigen::MatrixXd RandomPreconditioner::getSchurComplement(int t){
+Eigen::MatrixXd RandomPreconditioner::getSchurComplement(int64_t t){
     PriorityMatrix* a = getPriorityMatrix();
     double n = a->n;
 
@@ -719,7 +729,7 @@ Eigen::MatrixXd RandomPreconditioner::getSchurComplement(int t){
         double csum = 0;
         std::vector<double> cumspace;
         std::vector<double> vals;
-        for(int ii = 0; ii < len ; ii++){
+        for(int64_t ii = 0; ii < len ; ii++){
             vals.push_back(colspace->at(ii)->val);
             csum += colspace->at(ii)->val;
             cumspace.push_back(csum);
@@ -727,7 +737,7 @@ Eigen::MatrixXd RandomPreconditioner::getSchurComplement(int t){
         double wdeg = csum;
         double colScale = 1;
 
-        for(int joffset = 0; joffset < len-1; joffset++){
+        for(int64_t joffset = 0; joffset < len-1; joffset++){
             PriorityElement* ll = colspace->at(joffset);
             double w = vals.at(joffset) * colScale;
             double j = ll->row;
@@ -738,7 +748,7 @@ Eigen::MatrixXd RandomPreconditioner::getSchurComplement(int t){
             double u_r = u_distribution(rand_generator);
             double r = u_r*(csum  - cumspace[joffset]) + cumspace[joffset];
             double koff = len-1;
-            for(int k_i = 0; k_i < len; k_i++){
+            for(int64_t k_i = 0; k_i < len; k_i++){
                 if(cumspace[k_i]>r){
                     koff = k_i;
                     break;
@@ -779,14 +789,14 @@ Eigen::MatrixXd RandomPreconditioner::getSchurComplement(int t){
     std::vector<Eigen::Vector3d> edge_info_vector;
     Eigen::MatrixXd edge_info;
 
-    int edge_info_counter = 0;
+    int64_t edge_info_counter = 0;
     while (pq->nitems > 0){
         double i = RandomPQPop(pq);
 
         double len = getColumnLength(a, i, colspace);
 
         len = compressColumnSC(colspace, len);
-        for(int ii = 0; ii < len ; ii++){
+        for(int64_t ii = 0; ii < len ; ii++){
             double val = colspace->at(ii)->val;
             double row = colspace->at(ii)->row;
             Eigen::Vector3d temp(row, i, val);
@@ -795,7 +805,7 @@ Eigen::MatrixXd RandomPreconditioner::getSchurComplement(int t){
         }
     }
     edge_info.resize(edge_info_counter, 3);
-    for(int z = 0; z < edge_info_counter; z++){
+    for(int64_t z = 0; z < edge_info_counter; z++){
         edge_info.row(z) = edge_info_vector[z];
     }
 
@@ -822,7 +832,7 @@ CoarseningPreconditioner::CoarseningPreconditioner(Eigen::SparseMatrix<double>* 
     _A = A;
 }
 
-Eigen::MatrixXd CoarseningPreconditioner::getSchurComplement(int t){
+Eigen::MatrixXd CoarseningPreconditioner::getSchurComplement(int64_t t){
 
     PriorityMatrix* a = getPriorityMatrix();
     double n = a->n;
@@ -846,7 +856,7 @@ Eigen::MatrixXd CoarseningPreconditioner::getSchurComplement(int t){
         double csum = 0;
         std::vector<double> cumspace;
         std::vector<double> vals;
-        for(int ii = 0; ii < len ; ii++){
+        for(int64_t ii = 0; ii < len ; ii++){
             vals.push_back(colspace->at(ii)->val);
             csum += colspace->at(ii)->val;
             cumspace.push_back(csum);
@@ -857,7 +867,7 @@ Eigen::MatrixXd CoarseningPreconditioner::getSchurComplement(int t){
         double u_r = u_distribution(rand_generator);
         double r = u_r*(csum);
         double koff = len-1;
-        for(int k_i = 0; k_i < len; k_i++){
+        for(int64_t k_i = 0; k_i < len; k_i++){
             if(cumspace[k_i]>r){
                 koff = k_i;
                 break;
@@ -873,7 +883,7 @@ Eigen::MatrixXd CoarseningPreconditioner::getSchurComplement(int t){
         // remove edges from node i to it's neighbours and
         // add random edges among it's neighbours from the selected
         // neighbour k
-        for(int joffset = 0; joffset < len; joffset++){
+        for(int64_t joffset = 0; joffset < len; joffset++){
             if(joffset == koff) continue;
 
             PriorityElement* ll = colspace->at(joffset);
@@ -905,12 +915,12 @@ Eigen::MatrixXd CoarseningPreconditioner::getSchurComplement(int t){
 
     std::vector<Eigen::Vector3d> edge_info_vector;
     Eigen::MatrixXd edge_info;
-    int edge_info_counter = 0;
+    int64_t edge_info_counter = 0;
     while (pq->nitems > 0){
         double i = DegreePQPop(pq);
         double len = getColumnLength(a, i, colspace);
         len = compressColumnSC(colspace, len, pq);
-        for(int ii = 0; ii < len ; ii++){
+        for(int64_t ii = 0; ii < len ; ii++){
             double val = colspace->at(ii)->val;
             double row = colspace->at(ii)->row;
             Eigen::Vector3d temp(row, i, val);
@@ -919,7 +929,7 @@ Eigen::MatrixXd CoarseningPreconditioner::getSchurComplement(int t){
         }
     }
     edge_info.resize(edge_info_counter, 3);
-    for(int z = 0; z < edge_info_counter; z++){
+    for(int64_t z = 0; z < edge_info_counter; z++){
         edge_info.row(z) = edge_info_vector[z];
     }
 

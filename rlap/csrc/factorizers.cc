@@ -1,7 +1,7 @@
-#include "third_party/eigen3/Eigen/SparseCore"
-#include "third_party/eigen3/Eigen/SparseCholesky"
-#include "third_party/eigen3/Eigen/Core"
-#include "third_party/eigen3/Eigen/Cholesky"
+#include <Eigen/SparseCore>
+#include <Eigen/SparseCholesky>
+#include <Eigen/Core>
+#include <Eigen/Cholesky>
 #include <iostream>
 #include <cmath>
 #include <functional>
@@ -16,20 +16,23 @@
 // Factorizer
 
 Eigen::SparseMatrix<double>* Factorizer::computeLaplacian(Eigen::SparseMatrix<double>* Adj){
+    if( ! (Adj->isApprox(Adj->transpose())) ){
+        std::cout << "Error: Adjacency matrix is not symmetric" ;
+        exit(0);
+    }
     Eigen::SparseMatrix<double>* D = new Eigen::SparseMatrix<double>(Adj->rows(), Adj->cols());
     Eigen::SparseMatrix<double>* L = new Eigen::SparseMatrix<double>(Adj->rows(), Adj->cols());
     Eigen::VectorXd v = Eigen::VectorXd::Ones(Adj->cols());
     Eigen::VectorXd res = *Adj * v;
     D->reserve(Eigen::VectorXi::Constant(Adj->cols(), 1));
-    for(int i = 0; i< res.size(); i++){
+    for(int64_t i = 0; i< res.size(); i++){
         D->insert(i,i) = res[i];
     }
     D->makeCompressed();
     *L = *D - *Adj;
     // check symmetry of the laplacian
-    Eigen::SparseMatrix<double> L_t = L->transpose();
-    if((*L - L_t ).norm() != 0){
-        std::cout << "Error: Laplacian is not symmetric";
+    if( ! (L->isApprox(L->transpose())) ){
+        std::cout << "Error: Laplacian is not symmetric" ;
         exit(0);
     }
     delete D;
@@ -40,7 +43,7 @@ Eigen::SparseMatrix<double>* Factorizer::computeLaplacian(Eigen::SparseMatrix<do
 
 ApproximateCholesky::ApproximateCholesky(){}
 
-void ApproximateCholesky::setup(Eigen::MatrixXd edge_info, int nrows, int ncols, std::string o_v, std::string o_n){
+void ApproximateCholesky::setup(Eigen::MatrixXd edge_info, int64_t nrows, int64_t ncols, std::string o_v, std::string o_n){
     Reader* r = new EdgeInfoMatrixReader(edge_info, nrows, ncols);
     _A = r->Read();
     _L = this->computeLaplacian(_A);
@@ -65,7 +68,7 @@ Eigen::SparseMatrix<double> ApproximateCholesky::getAdjacencyMatrix(){
     return *_A;
 }
 
-Eigen::MatrixXd ApproximateCholesky::getSchurComplement(int t){
+Eigen::MatrixXd ApproximateCholesky::getSchurComplement(int64_t t){
     return _prec->getSchurComplement(t);
 }
 

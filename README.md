@@ -32,17 +32,11 @@ _The motivation and methodology behind `rLap` is presented in my [ICML 2023](htt
 $ python3.9 -m virtualenv .venv
 $ source .venv/bin/activate
 
-# build the C++ code and create python bindings
-$ bazel build //rlap:all
+# install Eigen
+$ brew install eigen
 
-# package the library along with .so files from bazel-bin
-# if linux
-$ python setup.py --data bazel-bin -q bdist_wheel
-# if macos
-$ python setup.py --data bazel-bin -q bdist_wheel --plat-name macosx_10_14_x86_64
-
-# install
-$ pip install dist/*.whl
+# install rlap
+$ pip install .
 ```
 
 ## Usage
