@@ -12,14 +12,10 @@ Rest of the code is same as the one available here: https://github.com/hengruizh
 
 ## Usage
 
-We have included a helper notebook that can run on COLAB for convenience. To run it:
-1. upload the `CCA_SSG_rLap.ipynb` to COLAB.
-2. Now, upload the code provided in the anonymous url to COLAB. Make sure to rename the uploaded folder to `rlap`.
-3. Execute the cells in order to get the results.
-
-Alternatively, if you have an environment setup already, use the following bash script:
+Please install `rlap` by executin `install.sh` at the root of the repository. Next, all the experiments can be executed using:
 
 ```bash
+$ pip install dgl
 $ bash run.sh
 ```
 

@@ -1,7 +1,18 @@
 import argparse
 
 from model import CCA_SSG, LogReg
-from aug import random_aug, rlap_aug, ea_aug, nd_aug, markovd_aug, pprd_aug, rws_aug, ed_deg_aug, ed_ppr_aug, ed_evc_aug
+from aug import (
+    random_aug,
+    rlap_aug,
+    ea_aug,
+    nd_aug,
+    markovd_aug,
+    pprd_aug,
+    rws_aug,
+    ed_deg_aug,
+    ed_ppr_aug,
+    ed_evc_aug,
+)
 from dataset import load
 
 import numpy as np
@@ -10,39 +21,45 @@ import torch.nn as nn
 
 import warnings
 
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 
-parser = argparse.ArgumentParser(description='CCA-SSG')
+parser = argparse.ArgumentParser(description="CCA-SSG")
 
-parser.add_argument('--aug', type=str, default='ED', help='Augmentation technique.')
-parser.add_argument('--dataname', type=str, default='cora', help='Name of dataset.')
-parser.add_argument('--gpu', type=int, default=0, help='GPU index.')
-parser.add_argument('--epochs', type=int, default=100, help='Training epochs.')
-parser.add_argument('--lr1', type=float, default=1e-3, help='Learning rate of CCA-SSG.')
-parser.add_argument('--lr2', type=float, default=1e-2, help='Learning rate of linear evaluator.')
-parser.add_argument('--wd1', type=float, default=0, help='Weight decay of CCA-SSG.')
-parser.add_argument('--wd2', type=float, default=1e-4, help='Weight decay of linear evaluator.')
+parser.add_argument("--aug", type=str, default="ED", help="Augmentation technique.")
+parser.add_argument("--dataname", type=str, default="cora", help="Name of dataset.")
+parser.add_argument("--gpu", type=int, default=0, help="GPU index.")
+parser.add_argument("--epochs", type=int, default=100, help="Training epochs.")
+parser.add_argument("--lr1", type=float, default=1e-3, help="Learning rate of CCA-SSG.")
+parser.add_argument(
+    "--lr2", type=float, default=1e-2, help="Learning rate of linear evaluator."
+)
+parser.add_argument("--wd1", type=float, default=0, help="Weight decay of CCA-SSG.")
+parser.add_argument(
+    "--wd2", type=float, default=1e-4, help="Weight decay of linear evaluator."
+)
 
-parser.add_argument('--lambd', type=float, default=1e-3, help='trade-off ratio.')
-parser.add_argument('--n_layers', type=int, default=2, help='Number of GNN layers')
+parser.add_argument("--lambd", type=float, default=1e-3, help="trade-off ratio.")
+parser.add_argument("--n_layers", type=int, default=2, help="Number of GNN layers")
 
-parser.add_argument('--use_mlp', action='store_true', default=False, help='Use MLP instead of GNN')
+parser.add_argument(
+    "--use_mlp", action="store_true", default=False, help="Use MLP instead of GNN"
+)
 
-parser.add_argument('--der', type=float, default=0.2, help='Drop/Add edge/node ratio.')
-parser.add_argument('--dfr', type=float, default=0.2, help='Drop feature ratio.')
+parser.add_argument("--der", type=float, default=0.2, help="Drop/Add edge/node ratio.")
+parser.add_argument("--dfr", type=float, default=0.2, help="Drop feature ratio.")
 
-parser.add_argument("--hid_dim", type=int, default=512, help='Hidden layer dim.')
-parser.add_argument("--out_dim", type=int, default=512, help='Output layer dim.')
+parser.add_argument("--hid_dim", type=int, default=512, help="Hidden layer dim.")
+parser.add_argument("--out_dim", type=int, default=512, help="Output layer dim.")
 
 args = parser.parse_args()
 
 # check cuda
 if args.gpu != -1 and th.cuda.is_available():
-    args.device = 'cuda:{}'.format(args.gpu)
+    args.device = "cuda:{}".format(args.gpu)
 else:
-    args.device = 'cpu'
+    args.device = "cpu"
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     print(args)
     graph, feat, labels, num_class, train_idx, val_idx, test_idx = load(args.dataname)
@@ -69,10 +86,12 @@ if __name__ == '__main__':
             "RWS": rws_aug,
             "ED_DEG": ed_deg_aug,
             "ED_PPR": ed_ppr_aug,
-            "ED_EVC": ed_evc_aug
+            "ED_EVC": ed_evc_aug,
         }
         if args.aug not in list(aug_func_mapper.keys()):
-            raise ValueError("--aug should be in {}".format(",".join(list(aug_func_mapper.keys()))))
+            raise ValueError(
+                "--aug should be in {}".format(",".join(list(aug_func_mapper.keys())))
+            )
 
         aug_func = aug_func_mapper[args.aug]
         graph1, feat1 = aug_func(graph, feat, args.dfr, args.der)
@@ -107,7 +126,7 @@ if __name__ == '__main__':
         loss.backward()
         optimizer.step()
 
-        print('Epoch={:03d}, loss={:.4f}'.format(epoch, loss.item()))
+        print("Epoch={:03d}, loss={:.4f}".format(epoch, loss.item()))
 
     print("=== Evaluation ===")
     graph = graph.to(args.device)
@@ -130,7 +149,7 @@ if __name__ == '__main__':
     val_feat = feat[val_idx]
     test_feat = feat[test_idx]
 
-    ''' Linear Evaluation '''
+    """ Linear Evaluation """
     logreg = LogReg(train_embs.shape[1], num_class)
     opt = th.optim.Adam(logreg.parameters(), lr=args.lr2, weight_decay=args.wd2)
 
@@ -166,6 +185,10 @@ if __name__ == '__main__':
                 if test_acc > eval_acc:
                     eval_acc = test_acc
 
-            print('Epoch:{}, train_acc:{:.4f}, val_acc:{:4f}, test_acc:{:4f}'.format(epoch, train_acc, val_acc, test_acc))
+            print(
+                "Epoch:{}, train_acc:{:.4f}, val_acc:{:4f}, test_acc:{:4f}".format(
+                    epoch, train_acc, val_acc, test_acc
+                )
+            )
 
-    print('Linear evaluation accuracy:{:.4f}'.format(eval_acc))
+    print("Linear evaluation accuracy:{:.4f}".format(eval_acc))
